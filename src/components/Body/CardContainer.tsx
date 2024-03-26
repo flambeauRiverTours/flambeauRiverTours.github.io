@@ -2,16 +2,61 @@
  * Container holding feature cards that link out to subpages
  */
 import FeatureCard from "./FeatureCard";
-import "bootstrap/dist/css/bootstrap.css"
+import Container from "react-bootstrap/Container"
+import Row from "react-bootstrap/Row"
+
 function CardContainer(){
+  const cardDataArray = __getCardData();
     return (
-    <div className="container px-4 py-5" id="custom-cards">
-    <div className="row row-cols-1 row-cols-lg-3 align-items-stretch g-4 py-5">
-        <FeatureCard title="About me" link="#"/>
-        <FeatureCard title="Projects I'm working on" />
-        <FeatureCard title="Things I'm reading" />
-    </div>
-    </div>)
+    <Container fluid>
+      <Row xs={1} md={2} className="g-4">
+      {cardDataArray.map((cardData, idx) => (
+        <FeatureCard key={idx} title={cardData.title}  body={cardData.body}/>
+      ))}
+      </Row>
+    </Container>)
 }
+
+/**
+ * Populates card data array for use when creating the cards. New cards need a new
+ * cardDataAry.push
+ */
+function __getCardData(): Array<ICardData>{
+  const cardDataAry: ICardData[] = [];
+  cardDataAry.push({
+    title: "A",
+    body: "b",
+    imagePath: ""
+  });
+  cardDataAry.push({
+    title: "A",
+    body: "b",
+    imagePath: ""
+  });
+  cardDataAry.push({
+    title: "A",
+    body: "b",
+    imagePath: ""
+  });
+  cardDataAry.push({
+    title: "A",
+    body: "b",
+    imagePath: ""
+  });
+  cardDataAry.push({
+    title: "A",
+    body: "b",
+    imagePath: ""
+  });
+  return cardDataAry;
+}
+
+interface ICardData{
+  title: string;
+  body: string;
+  imagePath: string;
+}
+
+
 
 export default CardContainer;

@@ -1,18 +1,21 @@
+/**
+ * Container holding the portrait as well as the cards.
+ */
+
 import CardContainer from "./CardContainer";
-
-
+import Image from 'react-bootstrap/Image'
+import Stack from 'react-bootstrap/Stack'
+import Container from 'react-bootstrap/Container'
 function PortraitBlock(){
     return <>
-    <section className="py-5 text-center container" data-bs-theme="dark">
-    <div className="row py-lg-5">
-      <div className="col-lg-6 col-md-8 mx-auto">
-        <img  src="https://media.licdn.com/dms/image/D4E03AQGro4fYHxGiqw/profile-displayphoto-shrink_400_400/0/1704245613526?e=1717027200&v=beta&t=8UH09ZAA9M8iZ_ycN0B_IENCBB0Wr88xQimk6jRasBI" className="bd-placeholder-img rounded-circle" height="250" width="250"/>
-        <div className="d-flex gap-2 justify-content-center py-5">
+    <Stack gap={3} className="justify-content-md-center" >
+      <Container fluid  style={{paddingTop: '3rem', textAlign: 'center'}}>
+        <Image src="src\assets\1704245613526.jpg" style={{height: '30rem'}} roundedCircle fluid />
+      </Container>
+      <Container fluid>
         <CardContainer />
-        </div>
-      </div>
-    </div>
-  </section>
+      </Container>
+    </Stack>
     </>;
 
 }

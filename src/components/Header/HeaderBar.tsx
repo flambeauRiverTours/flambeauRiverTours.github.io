@@ -1,18 +1,24 @@
-function HeaderBar(){
-    return <>
-    <div className="container">
-    <header className="d-flex flex-wrap justify-content-center py-3 mb-4 border-bottom">
-      <a href="/" className="d-flex align-items-center mb-3 mb-md-0 me-md-auto link-body-emphasis text-decoration-none">
-        <span className="fs-4">Jack Treadwell</span>
-      </a>
+import Container from 'react-bootstrap/Container';
+import Nav from 'react-bootstrap/Nav';
+import Navbar from 'react-bootstrap/Navbar';
 
-      <ul className="nav nav-pills">
-        <li className="nav-item"><a href="https://www.linkedin.com/in/john-treadwell/" className="nav-link">LinkedIn</a></li>
-        <li className="nav-item"><a href="https://github.com/flambeauRiverTours" className="nav-link">GitHub</a></li>
-      </ul>
-    </header>
-  </div>
-    </>;
+
+function HeaderBar(){
+  return (
+    <Navbar expand="lg" className="bg-body-tertiary justify-content-between" data-bs-theme="dark" fixed="top">
+      <Container>
+        <Navbar.Brand href="#home">Jack Treadwell</Navbar.Brand>
+        <Nav className="justify-content-end">
+          <Nav.Link href='https://www.linkedin.com/in/john-treadwell/'>
+            LinkedIn
+          </Nav.Link>
+          <Nav.Link href='https://github.com/flambeauRiverTours'>
+            GitHub
+          </Nav.Link>
+        </Nav>
+      </Container>
+    </Navbar>
+  );
 
 }
 

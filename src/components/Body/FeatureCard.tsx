@@ -4,17 +4,24 @@
  * can contain a background image.
  * 
  */
-import "bootstrap/dist/css/bootstrap.css"
+import Card from 'react-bootstrap/Card';
+import Col from "react-bootstrap/Col"
 function FeatureCard(props: any){
-    const backgroundImageStyle = {backgroundImage: "url(" + props.image + ")"};
-    return (<div className="col"><a href="#">
-    <div className="card card-cover h-100 overflow-hidden text-bg-dark rounded-4 shadow-lg" style={backgroundImageStyle}>
-      <div className="d-flex flex-column h-100 p-5 pb-3 text-white text-shadow-1">
-        <h3 className="pt-5 mt-5 mb-4 display-6 lh-1 fw-bold">{props.title}</h3>
-      </div>
-    </div>
-    </a>
-  </div>);
+    return (
+      <Col key={props.key}>
+      <Card style={{height: '10rem' }} >
+      <Card.Img variant="top" src={props.imageSource} />
+      <Card.ImgOverlay>
+        <Card.Title>{props.title}</Card.Title>
+        <Card.Text>
+          {props.body}
+        </Card.Text>
+        <Card.Link>
+          Read More
+        </Card.Link>
+      </Card.ImgOverlay>
+    </Card>
+    </Col>);
 }
 
 export default FeatureCard;
