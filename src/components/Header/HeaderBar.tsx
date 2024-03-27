@@ -5,9 +5,9 @@ import Navbar from 'react-bootstrap/Navbar';
 
 function HeaderBar(){
   return (
-    <Navbar expand="lg" className="bg-body-tertiary justify-content-between" data-bs-theme="dark" fixed="top">
+    <Navbar expand="lg" className=" bg-secondary shadow">
       <Container>
-        <Navbar.Brand href="#home">Jack Treadwell</Navbar.Brand>
+        <Navbar.Brand href="#home" className='justify-content-start me-auto'>Jack Treadwell</Navbar.Brand>
         <Nav className="justify-content-end">
           <Nav.Link href='https://www.linkedin.com/in/john-treadwell/'>
             LinkedIn

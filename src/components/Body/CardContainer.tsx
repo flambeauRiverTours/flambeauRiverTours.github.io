@@ -11,7 +11,7 @@ function CardContainer(){
     <Container fluid>
       <Row xs={1} md={2} className="g-4">
       {cardDataArray.map((cardData, idx) => (
-        <FeatureCard key={idx} title={cardData.title}  body={cardData.body}/>
+        <FeatureCard key={idx} title={cardData.title}  body={cardData.body} />
       ))}
       </Row>
     </Container>)
@@ -25,28 +25,23 @@ function __getCardData(): Array<ICardData>{
   const cardDataAry: ICardData[] = [];
   cardDataAry.push({
     title: "A",
-    body: "b",
-    imagePath: ""
+    body: "b"
   });
   cardDataAry.push({
     title: "A",
     body: "b",
-    imagePath: ""
   });
   cardDataAry.push({
     title: "A",
     body: "b",
-    imagePath: ""
   });
   cardDataAry.push({
     title: "A",
     body: "b",
-    imagePath: ""
   });
   cardDataAry.push({
     title: "A",
     body: "b",
-    imagePath: ""
   });
   return cardDataAry;
 }
@@ -54,7 +49,6 @@ function __getCardData(): Array<ICardData>{
 interface ICardData{
   title: string;
   body: string;
-  imagePath: string;
 }
 
 

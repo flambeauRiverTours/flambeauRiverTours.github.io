@@ -7,21 +7,28 @@
 import Card from 'react-bootstrap/Card';
 import Col from "react-bootstrap/Col"
 function FeatureCard(props: any){
+
     return (
       <Col key={props.key}>
       <Card style={{height: '10rem' }} >
-      <Card.Img variant="top" src={props.imageSource} />
-      <Card.ImgOverlay>
         <Card.Title>{props.title}</Card.Title>
         <Card.Text>
           {props.body}
         </Card.Text>
-        <Card.Link>
+        <Card.Footer>
+          <Card.Link onClick={ () =>{__featureCardClicked(true)}}>
           Read More
-        </Card.Link>
-      </Card.ImgOverlay>
+          </Card.Link>
+        </Card.Footer>
     </Card>
     </Col>);
+}
+
+function __featureCardClicked(event: any){
+  if(event){
+    //event.preventDefault();
+  }
+  console.log("Feature Card Clicked");
 }
 
 export default FeatureCard;
