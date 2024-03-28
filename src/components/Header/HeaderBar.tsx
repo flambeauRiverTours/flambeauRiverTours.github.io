@@ -1,11 +1,15 @@
+/**
+ * Header bar for the site, containing links to external sites
+ */
+
 import Container from 'react-bootstrap/Container';
 import Nav from 'react-bootstrap/Nav';
 import Navbar from 'react-bootstrap/Navbar';
-
+import "./HeaderBar.scss"
 
 function HeaderBar(){
   return (
-    <Navbar expand="lg" className=" bg-secondary shadow">
+    <Navbar expand="lg" className="headerBar bg-secondary shadow">
       <Container>
         <Navbar.Brand href="#home" className='justify-content-start me-auto'>Jack Treadwell</Navbar.Brand>
         <Nav className="justify-content-end">
