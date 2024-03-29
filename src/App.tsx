@@ -1,5 +1,4 @@
 
-import HeaderBar from './components/Header/HeaderBar'
 import BodyBlock from './components/Body/BodyBlock'
 import './App.scss'
 import Sidebar from './components/Sidebar/Sidebar'
@@ -23,10 +22,9 @@ function App() {
   })
   return (
     <>
-      <HeaderBar></HeaderBar>
       <div >
         <Row>
-          <Col xs={2} className='bg-secondary'>
+          <Col xs={2} className='bg-secondary border-secondary'>
             <Sidebar buttonTitles={pageData.getButtonTitles()} buttonSelectionCallback={sidebarButtonSelectionCallback} ></Sidebar>
           </Col>
           <Col>
