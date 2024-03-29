@@ -1,3 +1,16 @@
 .sidebar{
-    height: calc(100vh - 3rem);
+    height: 100vh;
+    border: 10px;
+}
+
+.nameItem{
+    overflow: visible;
+    padding-top: 1rem;
+}
+
+.dividerBar{
+    height: 1px;
+    border-bottom: solid;
+    border-bottom-color: white;
+    border-bottom-width: 1px;
 }

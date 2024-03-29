@@ -12,19 +12,18 @@ import { ISectionData } from './datamodel/SectionData'
 function App() {
   const pageData = new FullPageData();
   const [activeBodyBlockIndex, setActiveBodyBlock] = useState(0);
+
+  //handler for when a button is clicked in the sidebar. Changes the active body block
   const sidebarButtonSelectionCallback = (index: number) =>{
     if (index !== activeBodyBlockIndex) {
       setActiveBodyBlock(index);
     }
   }
-  pageData.getSectionDataArray().forEach((value: ISectionData) =>{
-    if(value){}
-  })
   return (
     <>
       <div >
         <Row>
-          <Col xs={2} className='bg-secondary border-secondary'>
+          <Col xs={2} className='bg-secondary border-secondary sidebarColumn' style={{paddingRight: "0px"}}>
             <Sidebar buttonTitles={pageData.getButtonTitles()} buttonSelectionCallback={sidebarButtonSelectionCallback} ></Sidebar>
           </Col>
           <Col>
