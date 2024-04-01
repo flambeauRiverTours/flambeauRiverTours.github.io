@@ -13,7 +13,7 @@ function BodyBlock(props: IBodyBlockProps){
     <Fade in={props.visible} mountOnEnter unmountOnExit onExited={props.afterFadeOut}>
       <Stack gap={3} className="justify-content-md-center bg-body"  >
         <Container fluid  style={{paddingTop: '3rem', textAlign: 'center'}}>
-          <Image src={props.sectionData.imagePath} style={{height: '30rem'}} roundedCircle fluid />
+          <Image src={props.sectionData.imagePath} style={{height: '20rem'}} roundedCircle fluid />
         </Container>
         <Container fluid>
           {props.sectionData.bodyTextSections.map((value: IBodyTextSection) =>{
