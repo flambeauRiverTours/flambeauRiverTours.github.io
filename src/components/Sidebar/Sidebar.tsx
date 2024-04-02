@@ -31,8 +31,8 @@ function Sidebar(props: ISideBarInitializationProps){
 }
 
 interface ISideBarInitializationProps{
-    buttonTitles: string[];
-    buttonSelectionCallback: (index: number) => void;
+    buttonTitles: string[]; //List of button titles to show in the sidebar
+    buttonSelectionCallback: (index: number) => void; //Callback to invoke when a button is selected
 }
 
 export default Sidebar;

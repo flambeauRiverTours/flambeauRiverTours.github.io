@@ -28,6 +28,7 @@ function App() {
   const bodyBlockFadeOutCallback = () =>{
     setActiveBodyBlock(nextBodyBlock);
   }
+
   return (
     <>
       <div >
@@ -39,7 +40,6 @@ function App() {
             {pageData.getSectionDataArray().map((sectionData: ISectionData, index: number) =>{
               return <BodyBlock sectionData={sectionData} visible={index === activeBodyBlockIndex} afterFadeOut={bodyBlockFadeOutCallback}></BodyBlock>
             })}
-            
           </Col>
         </Row>
       </div>
