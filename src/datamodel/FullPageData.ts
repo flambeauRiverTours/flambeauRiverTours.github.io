@@ -1,4 +1,5 @@
 import {ISectionData}  from "./SectionData";
+import portraitImgUrl from '../assets/1704245613526.jpg';
 
 /**
  * Data model representing the full page
@@ -46,7 +47,7 @@ export class FullPageData{
     private __getAboutMeSectionData(): ISectionData{
         const sectionData: ISectionData = {
             buttonTitle: "About Me",
-            imagePath: 'src/assets/1704245613526.jpg',
+            imagePath: portraitImgUrl,
             bodyTextSections: []
        };
        sectionData.bodyTextSections.push({
