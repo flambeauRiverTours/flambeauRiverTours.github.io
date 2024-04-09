@@ -64,7 +64,7 @@ export class FullPageData{
     private __getMyCareerSection(): ISectionData{
         const sectionData: ISectionData = {
             buttonTitle: "My Career",
-            imagePath: '../src/assets/1704245613526.jpg',
+            imagePath: portraitImgUrl,
             bodyTextSections: []
        };
        sectionData.bodyTextSections.push({
