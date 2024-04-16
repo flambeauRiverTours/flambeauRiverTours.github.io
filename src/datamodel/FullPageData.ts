@@ -51,8 +51,8 @@ export class FullPageData{
             bodyTextSections: []
        };
        sectionData.bodyTextSections.push({
-        title: "Lorem Ipsum",
-        body: "Lorem Ipsum Lorem Ipsum"
+        title: "About Me",
+        body: "I'm Jack, a full-stack software engineer based out of Berlin. I have a passion for designing and implementing software that bridges business needs, regulatory requirements, and modern usability best practices, as well as mentoring and growing the skillsets and careers of my fellow engineers. I'm currently seeking a job as a software engineer that can help me continue to make an impact in these areas."
        });
        return sectionData;
     }
