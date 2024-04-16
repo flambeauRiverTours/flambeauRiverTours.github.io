@@ -54,6 +54,10 @@ export class FullPageData{
         title: "About Me",
         body: "I'm Jack, a full-stack software engineer based out of Berlin. I have a passion for designing and implementing software that bridges business needs, regulatory requirements, and modern usability best practices, as well as mentoring and growing the skillsets and careers of my fellow engineers. I'm currently seeking a job as a software engineer that can help me continue to make an impact in these areas."
        });
+       sectionData.bodyTextSections.push({
+        title: "",
+        body: "If you're hiring, looking to collaborate on a project, or just want to chat about anything you find on this site, feel free to shoot me an email or reach out to me on LinkedIn!"
+       });
        return sectionData;
     }
 
@@ -68,26 +72,13 @@ export class FullPageData{
             bodyTextSections: []
        };
        sectionData.bodyTextSections.push({
-        title: "Lorem Ipsum",
-        body: "Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum"
+        title: "Epic - Team Lead",
+        body: "From March 2021 to May 2024, I worked at Epic Systems, an industry-leading electronic health record development company, as a Software Developer Team Lead. As a Team Lead, I managed a team of nine developers, and owned several integrated areas of functionality. I lead my team through several periods of intense change in the healthcare industry, including the Covid-19 pandemic, the rise of generative AI, and several significant regulatory changes in the US healthcare system. I was primarily responsible for day-to-day load balancing across the team, ensuring ownership and execution of enhancement projects, and future vision and roadmap building in collaboration with company leadership and customer executives. I was also responsible for the growth of my team members, providing them regular feedback on their work and planning growth paths for them. I continued to work as a developer alongside these responsibilities, taking bug fixes, code review, and customer debugging for my areas of ownership, and developing several enhancements for customers in the UK and Norway."
        });
        sectionData.bodyTextSections.push({
-        title: "Lorem Ipsum",
-        body: "Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum"
+        title: "Epic - Software Developer",
+        body: "From June 2018 to March 2018, I worked at Epic Systems as a Software Developer. As a developer, I was primarily responsible for analyzing medical billing regulations for various countries in North America and Europe, designing UI and business logic to support those billing requirements, and then developing and maintaining that functionality. I primarily used React, Typescript, and C#, along with Epic’s unique backend infrastructure. I’m particularly proud of some rapid development I did to support charging for telehealth visits at the start of the Covid-19 pandemic, which is still used 1.5 million times per month today, as well as a development to support significant US physician billing changes for 2021, which is still used 3 million times per month more than three years later."
        });
-       sectionData.bodyTextSections.push({
-        title: "Lorem Ipsum",
-        body: "Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum"
-       });
-       sectionData.bodyTextSections.push({
-        title: "Lorem Ipsum",
-        body: "Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum"
-       });
-       sectionData.bodyTextSections.push({
-        title: "Lorem Ipsum",
-        body: "Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsumum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum Lorem Ipsum"
-       });
-
        return sectionData;
     }
 }
