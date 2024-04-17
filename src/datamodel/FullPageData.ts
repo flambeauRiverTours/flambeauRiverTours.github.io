@@ -38,6 +38,7 @@ export class FullPageData{
     private __initializeSectionData(): void{
        this.__sectionData.push(this.__getAboutMeSectionData());
        this.__sectionData.push(this.__getMyCareerSection())
+       this.__sectionData.push(this.__getProjectsSection());
     }
 
     /**
@@ -78,6 +79,19 @@ export class FullPageData{
        sectionData.bodyTextSections.push({
         title: "Epic - Software Developer",
         body: "From June 2018 to March 2021, I worked at Epic Systems as a Software Developer. As a developer, I was primarily responsible for analyzing medical billing regulations for various countries in North America and Europe, designing UI and business logic to support those billing requirements, and then developing and maintaining that functionality. I primarily used React, Typescript, and C#, along with Epic’s unique backend infrastructure. I’m particularly proud of some rapid development I did to support charging for telehealth visits at the start of the Covid-19 pandemic, which is still used 1.5 million times per month today, as well as a development to support significant US physician billing changes for 2021, which is still used 3 million times per month more than three years later."
+       });
+       return sectionData;
+    }
+
+    private __getProjectsSection(): ISectionData{
+        const sectionData: ISectionData = {
+            buttonTitle: "Projects",
+            imagePath: portraitImgUrl,
+            bodyTextSections: []
+       };
+       sectionData.bodyTextSections.push({
+        title: "This Site",
+        body: "I used the development of this site to catch up on many of the additions to the modern web development experience I didn’t get to utilize at Epic. This site is implemented in React, primarily using React Bootstrap for the components of the site. I used Vite for local development server setup, and hosted the site using GitHub pages, using GitHub actions to deploy the site after commits from my local machine. "
        });
        return sectionData;
     }
