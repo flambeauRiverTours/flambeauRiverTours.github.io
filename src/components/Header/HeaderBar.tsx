@@ -8,6 +8,7 @@ import Offcanvas from "react-bootstrap/Offcanvas";
 import Container from "react-bootstrap/Container";
 import Sidebar from "../Sidebar/Sidebar";
 import { useState } from "react";
+import "./HeadBar.scss";
 
 function HeaderBar(props: IHeaderInitializationProps) {
     const [showOffcanvas, setShowOffCanvas] = useState(false);
@@ -32,10 +33,12 @@ function HeaderBar(props: IHeaderInitializationProps) {
                   show={showOffcanvas}
                   onHide={handleClose}
                 >
-                  <Offcanvas.Header closeButton className="text-light text-lg-center">
-                    <Offcanvas.Title  id={`offcanvasNavbarLabel-expand-${expand}`}>
-                      Jack Treadwell
-                    </Offcanvas.Title>
+                  <Offcanvas.Header closeButton closeVariant="white" className="text-light text-lg-center">
+                    <Container fluid>
+                      <Offcanvas.Title className="nameTitle" id={`offcanvasNavbarLabel-expand-${expand}`}>
+                        Jack Treadwell
+                      </Offcanvas.Title>
+                    </Container>
                   </Offcanvas.Header>
                   <Offcanvas.Body>
                     <Sidebar activeIndex={props.activeIndex} hideName buttonTitles={props.buttonTitles} buttonSelectionCallback={wrappedButtonSelectionCallback}/>
