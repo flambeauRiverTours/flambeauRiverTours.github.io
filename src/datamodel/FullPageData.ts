@@ -1,5 +1,8 @@
 import {ISectionData}  from "./SectionData";
 import portraitImgUrl from '../assets/1704245613526.jpg';
+import careerImgUrl from '../assets/laptop-2298286_1280.png';
+import projectImgUrl  from '../assets/code-geek-2680204_1280.png';
+import bookImgUrl from '../assets/reading-3723751_1920.jpg';
 
 /**
  * Data model representing the full page
@@ -70,7 +73,7 @@ export class FullPageData{
     private __getMyCareerSection(): ISectionData{
         const sectionData: ISectionData = {
             buttonTitle: "My Career",
-            imagePath: portraitImgUrl,
+            imagePath: careerImgUrl,
             bodyTextSections: []
        };
        sectionData.bodyTextSections.push({
@@ -91,7 +94,7 @@ export class FullPageData{
     private __getProjectsSection(): ISectionData{
         const sectionData: ISectionData = {
             buttonTitle: "Projects",
-            imagePath: portraitImgUrl,
+            imagePath: projectImgUrl,
             bodyTextSections: []
        };
        sectionData.bodyTextSections.push({
@@ -105,12 +108,12 @@ export class FullPageData{
     {
         const sectionData: ISectionData = {
             buttonTitle: "Reading List",
-            imagePath: portraitImgUrl,
+            imagePath: bookImgUrl,
             bodyTextSections: []
         };
         sectionData.bodyTextSections.push({
             title: "Reading List",
-            body: "This is my little journal of books I've read recently that I found particularly interesting, motivating, or just entertaining. They're listed out reverse chronologically, and I try to add a book every few weeks."
+            body: "This is my little journal of books I've read recently that I found particularly interesting, motivating, or just entertaining. They're listed out reverse chronologically, and I try to add a book every few weeks. I generally read on my Kindle Paperwhite, and borrow e-books from the South Central Wisconsin Library System."
         });
         sectionData.bodyTextSections.push({
             title: "Cat's Craddle",
