@@ -39,6 +39,7 @@ export class FullPageData{
        this.__sectionData.push(this.__getAboutMeSectionData());
        this.__sectionData.push(this.__getMyCareerSection())
        this.__sectionData.push(this.__getProjectsSection());
+       this.__sectionData.push(this.__getReadingListSection());
     }
 
     /**
@@ -83,6 +84,10 @@ export class FullPageData{
        return sectionData;
     }
 
+    /**
+     * Creates the SectionData for the Projects section
+     * @returns SectionData representing the Projects section
+     */
     private __getProjectsSection(): ISectionData{
         const sectionData: ISectionData = {
             buttonTitle: "Projects",
@@ -94,5 +99,31 @@ export class FullPageData{
         body: "I used the development of this site to catch up on many of the additions to the modern web development experience I didn’t get to utilize at Epic. This site is implemented in React, primarily using React Bootstrap for the components of the site. I used Vite for local development server setup, and hosted the site using GitHub pages, using GitHub actions to deploy the site after commits from my local machine. "
        });
        return sectionData;
+    }
+
+    private __getReadingListSection(): ISectionData
+    {
+        const sectionData: ISectionData = {
+            buttonTitle: "Reading List",
+            imagePath: portraitImgUrl,
+            bodyTextSections: []
+        };
+        sectionData.bodyTextSections.push({
+            title: "Reading List",
+            body: "This is my little journal of books I've read recently that I found particularly interesting, motivating, or just entertaining. They're listed out reverse chronologically, and I try to add a book every few weeks."
+        });
+        sectionData.bodyTextSections.push({
+            title: "Cat's Craddle",
+            body: "Somewhat surprisingly, I've read very little Vonnegut. I immensley enjoyed the dark humor laced throughout the novel, and, having recently watched  Oppenheimer, I found the usage of ice-nine to satirize nuclear weapons and the nuclear arms race to be genius. I also found the narrator's awkward traversal of social situations hit a little too close to home sometimes."
+        });
+        sectionData.bodyTextSections.push({
+            title: "Pageboy",
+            body: "I hadn't followed Elliot Page's story much, outside of hearing that he was transitioning, and knowing him from Juno and Inception. His memoir was, at times, a difficult read, with Page clearly and sometimes bluntly outlaying the darkness and pain he's experienced throughout his life. The end is uplifting though, and I found Page's story to be a great opportunity to reflect on how attitudes towards LGBTQIA+ folks have changed over the course of my lifetime."
+        });
+        sectionData.bodyTextSections.push({
+            title: "Rich Dad, Poor Dad",
+            body: "I'm not generally a motivational book sort of guy, but I picked this one up after seeing it recommended on some financial planning websites. I would not recommend it from a financial planning perspective - it seems like Kiyosaki, while a shrewd investor, mostly got lucky on a few bets - but I enjoyed how Kiyosaki illustrated how highly intelligent, driven people with good careers fail to make financial headway. I found his debunking of the common money myths that trap these sorts of people particularly valuable."
+        });
+        return sectionData;
     }
 }
