@@ -16,24 +16,24 @@ function BodyBlock(props: IBodyBlockProps){
           <Image src={props.sectionData.imagePath} style={{height: '20rem'}} roundedCircle fluid />
         </Container>
         <Container fluid>
-          {props.sectionData.bodyTextSections.map((value: IBodyTextSection) =>{
-
+          {props.sectionData.bodyTextSections.map((value: IBodyTextSection, index: number) =>{
+            const elementId = "Body Block " + index; 
             switch (value.style){
               case BodyBlockStyle.titleBlock:
-                return <>
+                return <div id={elementId}>
                   <h1>{value.title}</h1>
                   {value.body}
-                </>
+                </div>
               case BodyBlockStyle.contentBlock:
-                return <>
+                return <div id={elementId}>
                   <h4>{value.title}</h4>
                   {value.body}
-                </>;
+                </div>;
               case BodyBlockStyle.imageBlock:
-                return <>
+                return <div id={elementId}>
                   <h1>{value.title}</h1>
                   {value.body}
-                </>
+                </div>
             }})}
         </Container>
       </Stack>

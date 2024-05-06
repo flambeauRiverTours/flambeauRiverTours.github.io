@@ -25,7 +25,7 @@ function Sidebar(props: ISideBarInitializationProps){
                         props.buttonSelectionCallback(index); //tells App.tsx to change the active body block
                         setActiveIndex(index);
                     }
-                    return <Button active={activeIndex === index} onClick={buttonClick} variant="secondary">{buttonTitle}</Button>
+                    return <Button id={"Sidebar Button " + index} active={activeIndex === index} onClick={buttonClick} variant="secondary">{buttonTitle}</Button>
                 })}
             </Stack>
         </Container>);
