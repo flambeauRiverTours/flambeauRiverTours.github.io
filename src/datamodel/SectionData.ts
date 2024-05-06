@@ -10,5 +10,12 @@ export interface ISectionData{
 
 export interface IBodyTextSection{
     title: string;
-    body: string;
+    body: string | JSX.Element;
+    style: BodyBlockStyle;
+}
+
+export enum BodyBlockStyle{
+    titleBlock,
+    contentBlock,
+    imageBlock
 }

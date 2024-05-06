@@ -6,7 +6,7 @@ import Image from 'react-bootstrap/Image'
 import Stack from 'react-bootstrap/Stack'
 import Container from 'react-bootstrap/Container'
 import Fade from 'react-bootstrap/Fade'
-import { IBodyTextSection, ISectionData } from "../../datamodel/SectionData";
+import { BodyBlockStyle, IBodyTextSection, ISectionData } from "../../datamodel/SectionData";
 
 function BodyBlock(props: IBodyBlockProps){
     return (
@@ -17,10 +17,24 @@ function BodyBlock(props: IBodyBlockProps){
         </Container>
         <Container fluid>
           {props.sectionData.bodyTextSections.map((value: IBodyTextSection) =>{
-            return <>
-              <h1>{value.title}</h1>
-              <p>{value.body}</p>
-            </> })}
+
+            switch (value.style){
+              case BodyBlockStyle.titleBlock:
+                return <>
+                  <h1>{value.title}</h1>
+                  {value.body}
+                </>
+              case BodyBlockStyle.contentBlock:
+                return <>
+                  <h4>{value.title}</h4>
+                  {value.body}
+                </>;
+              case BodyBlockStyle.imageBlock:
+                return <>
+                  <h1>{value.title}</h1>
+                  {value.body}
+                </>
+            }})}
         </Container>
       </Stack>
     </Fade>);
