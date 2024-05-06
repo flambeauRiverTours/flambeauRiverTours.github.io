@@ -1,7 +1,7 @@
 import {ISectionData}  from "./SectionData";
 import portraitImgUrl from '../assets/1704245613526.jpg';
 import careerImgUrl from '../assets/laptop-2298286_1280.png';
-import projectImgUrl  from '../assets/code-geek-2680204_1280.png';
+import projectImgUrl  from '../assets/code-1839406_1280.jpg';
 import bookImgUrl from '../assets/reading-3723751_1920.jpg';
 
 /**
