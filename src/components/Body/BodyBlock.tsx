@@ -12,7 +12,7 @@ import ImageBodyText from './ImageBodyText';
 function BodyBlock(props: IBodyBlockProps){
     return (
     <Fade in={props.visible} mountOnEnter unmountOnExit onExited={props.afterFadeOut}>
-      <Stack gap={3} className="justify-content-md-center bg-body"  >
+      <Stack gap={4} className="justify-content-md-center bg-body"  >
         <Container fluid  style={{paddingTop: '3rem', textAlign: 'center'}}>
           <Image src={props.sectionData.imagePath} style={{height: '20rem'}} roundedCircle fluid />
         </Container>
@@ -27,7 +27,7 @@ function BodyBlock(props: IBodyBlockProps){
                 </div>
               case BodyBlockStyle.contentBlock:
                 return <div id={elementId}>
-                  <h4>{value.title}</h4>
+                  <h4 style={{paddingTop: '3rem'}}>{value.title}</h4>
                   {value.body}
                 </div>;
               case BodyBlockStyle.imageBlock:
