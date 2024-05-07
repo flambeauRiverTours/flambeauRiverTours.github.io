@@ -111,7 +111,7 @@ export class FullPageData{
      */
     private __getProjectsSection(): ISectionData{
         const sectionData: ISectionData = {
-            buttonTitle: "Projects",
+            buttonTitle: "My Projects",
             imagePath: projectImgUrl,
             bodyTextSections: []
        };
@@ -137,7 +137,7 @@ export class FullPageData{
     private __getReadingListSection(): ISectionData
     {
         const sectionData: ISectionData = {
-            buttonTitle: "Reading List",
+            buttonTitle: "My Reading List",
             imagePath: bookImgUrl,
             bodyTextSections: []
         };
@@ -170,7 +170,7 @@ export class FullPageData{
      */
     private __getTravelSection(): ISectionData{
         const sectionData: ISectionData = {
-            buttonTitle: "Travel",
+            buttonTitle: "My Travel",
             imagePath: travelImgUrl,
             bodyTextSections: []
         };
