@@ -71,6 +71,11 @@ export class FullPageData{
        });
        sectionData.bodyTextSections.push({
         title: "",
+        body: "This website is a way for me to showcase my accomplishments, the things that I'm passionate about, as well as an opportunity for me to keep my web development skills up to date. Hopefully this site will give you a better idea of who I am and what I can do!",
+        style: BodyBlockStyle.contentBlock,
+       });
+       sectionData.bodyTextSections.push({
+        title: "",
         body: "If you're hiring, looking to collaborate on a project, or just want to chat about anything you find on this site, feel free to shoot me an email or reach out to me on LinkedIn!",
         style: BodyBlockStyle.contentBlock,
        });
@@ -127,6 +132,12 @@ export class FullPageData{
        thisSiteBlock.style = BodyBlockStyle.contentBlock;
        thisSiteBlock.body = RichBodyTextSectionFactory.getBodyTextJSX(RichBodyTextSections.ProjectsWebpage);
        sectionData.bodyTextSections.push(thisSiteBlock);
+
+       const americanFootballManagerBlock = new BodyTextSection();
+       americanFootballManagerBlock.title = "American Football Manager",
+       americanFootballManagerBlock.style = BodyBlockStyle.contentBlock;
+       americanFootballManagerBlock.body = RichBodyTextSectionFactory.getBodyTextJSX(RichBodyTextSections.AmericanFootballManager);2
+       sectionData.bodyTextSections.push(americanFootballManagerBlock);
        return sectionData;
     }
 
