@@ -7,6 +7,7 @@ import Stack from 'react-bootstrap/Stack'
 import Container from 'react-bootstrap/Container'
 import Fade from 'react-bootstrap/Fade'
 import { BodyBlockStyle, IBodyTextSection, ISectionData } from "../../datamodel/SectionData";
+import ImageBodyText from './ImageBodyText';
 
 function BodyBlock(props: IBodyBlockProps){
     return (
@@ -30,10 +31,7 @@ function BodyBlock(props: IBodyBlockProps){
                   {value.body}
                 </div>;
               case BodyBlockStyle.imageBlock:
-                return <div id={elementId}>
-                  <h1>{value.title}</h1>
-                  {value.body}
-                </div>
+                return ImageBodyText({bodyTextSection: value, index: index});
             }})}
         </Container>
       </Stack>

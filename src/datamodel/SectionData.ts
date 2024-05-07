@@ -12,6 +12,7 @@ export interface IBodyTextSection{
     title: string;
     body: string | JSX.Element;
     style: BodyBlockStyle;
+    imagePath?: string;
 }
 
 export enum BodyBlockStyle{

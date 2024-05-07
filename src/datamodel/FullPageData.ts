@@ -3,8 +3,14 @@ import portraitImgUrl from '../assets/1704245613526.jpg';
 import careerImgUrl from '../assets/laptop-2298286_1280.png';
 import projectImgUrl  from '../assets/code-1839406_1280.jpg';
 import bookImgUrl from '../assets/reading-3723751_1920.jpg';
+import travelImgUrl from '../assets/compass-7592447_1280.jpg';
 import BodyTextSection from "./BodyTextSection";
 import { RichBodyTextSectionFactory, RichBodyTextSections } from "./RichBodyTextSectionFactory";
+import peruImgUrl from '../assets/Peru.jpg';
+import koreaImgUrl from '../assets/Korea.jpg';
+import japanImgUrl from '../assets/Japan.jpg';
+import banffImgUrl from '../assets/Banff.jpg';
+import australiaImgUrl from '../assets/Australia.jpg';
 
 /**
  * Data model representing the full page
@@ -45,6 +51,7 @@ export class FullPageData{
        this.__sectionData.push(this.__getMyCareerSection())
        this.__sectionData.push(this.__getProjectsSection());
        this.__sectionData.push(this.__getReadingListSection());
+       this.__sectionData.push(this.__getTravelSection());
     }
 
     /**
@@ -123,6 +130,10 @@ export class FullPageData{
        return sectionData;
     }
 
+    /**
+     * Creates the SectionData for the Reading List section
+     * @returns SectionData representing the Reading List section
+     */
     private __getReadingListSection(): ISectionData
     {
         const sectionData: ISectionData = {
@@ -149,6 +160,54 @@ export class FullPageData{
             title: "Rich Dad, Poor Dad",
             body: "I'm not generally a motivational book sort of guy, but I picked this one up after seeing it recommended on some financial planning websites. I would not recommend it from a financial planning perspective - it seems like Kiyosaki, while a shrewd investor, mostly got lucky on a few bets - but I enjoyed how Kiyosaki illustrated how highly intelligent, driven people with good careers fail to make financial headway. I found his debunking of the common money myths that trap these sorts of people particularly valuable.",
             style: BodyBlockStyle.contentBlock,
+        });
+        return sectionData;
+    }
+
+    /**
+     * Creates the SectionData for the Travel section
+     * @returns SectionData representing the Travel section
+     */
+    private __getTravelSection(): ISectionData{
+        const sectionData: ISectionData = {
+            buttonTitle: "Travel",
+            imagePath: travelImgUrl,
+            bodyTextSections: []
+        };
+        sectionData.bodyTextSections.push({
+            title: "Travel",
+            body: "I love to travel, and I've been lucky enough to visit 15 countries and 5 continents so far. I've included some of my favorite trips below, and I'm always looking for new places to explore.",
+            style: BodyBlockStyle.titleBlock,
+        });
+        sectionData.bodyTextSections.push({
+            title: "Japan",
+            body: "I visited Japan in 2023 with my partner, and we had an amazing time. We spent time in Tokyo, Kyoto, Osaka, and Hiroshima, with day trips to Hakone, Nara, and Miyajima. We loved the food (especially the noodles), the many museums we visited, and we loved our experiece at a baseball game in Tokyo so much that we went to another game in Hiroshima!",
+            style: BodyBlockStyle.imageBlock,
+            imagePath: japanImgUrl
+        });
+        sectionData.bodyTextSections.push({
+            title: "South Korea",
+            body: "I visited South Korea in 2023 with my partner as part of the same trip on which we visited Japan. We visited Seoul, Busan, and Jeju, and enjoyed many great hikes, visits to museums and art galleries, and tours of historical sites. We loved the food in South Korea, especially the street food,banchan, and the Korean BBQ.",
+            style: BodyBlockStyle.imageBlock,
+            imagePath: koreaImgUrl
+        });
+        sectionData.bodyTextSections.push({
+            title: "New Zealand & Australia",
+            body: "We visited New Zealand and Austalia in late 2022/early 2023. We especially enjoyed hiking Mt. Doom and touring Hobbiton in New Zealand, along with many delicious dinners of seafood and local wine. In Australia, we enjoyed Christmas lunch on the beach, New Years fireworks at the Sydney harbor, and many holiday celebrations with my partner's family.",
+            style: BodyBlockStyle.imageBlock,
+            imagePath: australiaImgUrl
+        });
+        sectionData.bodyTextSections.push({
+            title: "Banff & Yoho National Parks",
+            body: "We traveled to Banff and Yoho National Parks in Canada with my partner's uncle in the summer of 2022. We spent our days on breathtaking hikes and flyfishing in glacial streams, and we had an amazing time. We enjoyed evenings camping out, and saw lots of interesting wildlife, including a moose calf.",
+            style: BodyBlockStyle.imageBlock,
+            imagePath: banffImgUrl
+        });
+        sectionData.bodyTextSections.push({
+            title: "Peru",
+            body: "We traveled to Peru in the summer of 2019 with a group of family and friends. We spent a few days south of Lima, riding dune buggies through the Atacama desert and taking a boatride to a seabird reserve, then flew up to Cusco for a hike up to Macchu Picchu. We were especially lucky to be in the country when Peru won in the semifinal of that year's Copa America, and got to goin the celebrations with locals in Aguas Calientes.",
+            style: BodyBlockStyle.imageBlock,
+            imagePath: peruImgUrl
         });
         return sectionData;
     }
