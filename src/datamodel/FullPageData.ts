@@ -158,6 +158,11 @@ export class FullPageData{
             style: BodyBlockStyle.titleBlock,
         });
         sectionData.bodyTextSections.push({
+            title: "Autumn in the Heavenly Kingdom",
+            body: "I went into this book with little knowledge of the Chinese Civil War. As a result, I found the book to be a fascinating and informative read. Platt's contextualization of the events of the war within the broader goings-on of the time period was a particular highlight - before reading this book I would've thought it was a joke if you told me that China was in some way involved in the American Civil War, but this book shows the impact this conflict had, in particular through contrasting Britain's handling of these wars as they occurred simultaneously. This was a bit dense at times, but definitely worth the read.",
+            style: BodyBlockStyle.contentBlock,
+        });
+        sectionData.bodyTextSections.push({
             title: "Cat's Craddle",
             body: "Somewhat surprisingly, I've read very little Vonnegut. I immensley enjoyed the dark humor laced throughout the novel, and, having recently watched  Oppenheimer, I found the usage of ice-nine to satirize nuclear weapons and the nuclear arms race to be genius. I also found the narrator's awkward traversal of social situations hit a little too close to home sometimes.",
             style: BodyBlockStyle.contentBlock,
