@@ -1,9 +1,9 @@
 import {BodyBlockStyle, ISectionData}  from "./SectionData";
 import portraitImgUrl from '../assets/1704245613526.jpg';
-import careerImgUrl from '../assets/laptop-2298286_1280.png';
-import projectImgUrl  from '../assets/code-1839406_1280.jpg';
-import bookImgUrl from '../assets/reading-3723751_1920.jpg';
-import travelImgUrl from '../assets/compass-7592447_1280.jpg';
+import careerImgUrl from '../assets/Laptop.jpg';
+import projectImgUrl  from '../assets/Code.jpg';
+import bookImgUrl from '../assets/Reading.jpg';
+import travelImgUrl from '../assets/Compass.jpg';
 import BodyTextSection from "./BodyTextSection";
 import { RichBodyTextSectionFactory, RichBodyTextSections } from "./RichBodyTextSectionFactory";
 import peruImgUrl from '../assets/Peru.jpg';
@@ -163,7 +163,7 @@ export class FullPageData{
             style: BodyBlockStyle.contentBlock,
         });
         sectionData.bodyTextSections.push({
-            title: "Cat's Craddle",
+            title: "Cat's Cradle",
             body: "Somewhat surprisingly, I've read very little Vonnegut. I immensley enjoyed the dark humor laced throughout the novel, and, having recently watched  Oppenheimer, I found the usage of ice-nine to satirize nuclear weapons and the nuclear arms race to be genius. I also found the narrator's awkward traversal of social situations hit a little too close to home sometimes.",
             style: BodyBlockStyle.contentBlock,
         });
