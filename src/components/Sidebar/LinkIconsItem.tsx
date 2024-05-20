@@ -6,7 +6,7 @@ import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import "./LinkIconsItem.scss";
-import resumeUrl from "../../assets/Resume.pdf";
+import resumeUrl from "../../assets/CV - Jack Treadwell.pdf";
 
 function LinkIconsItem() {
     return (<Container fluid>
