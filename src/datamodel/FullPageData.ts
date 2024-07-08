@@ -134,9 +134,9 @@ export class FullPageData{
        sectionData.bodyTextSections.push(thisSiteBlock);
 
        const americanFootballManagerBlock = new BodyTextSection();
-       americanFootballManagerBlock.title = "American Football Manager",
+       americanFootballManagerBlock.title = "Tidbyt Berlin Transit App",
        americanFootballManagerBlock.style = BodyBlockStyle.contentBlock;
-       americanFootballManagerBlock.body = RichBodyTextSectionFactory.getBodyTextJSX(RichBodyTextSections.AmericanFootballManager);2
+       americanFootballManagerBlock.body = RichBodyTextSectionFactory.getBodyTextJSX(RichBodyTextSections.TidbytBerlinTransit);2
        sectionData.bodyTextSections.push(americanFootballManagerBlock);
        return sectionData;
     }
