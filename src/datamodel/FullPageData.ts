@@ -11,6 +11,7 @@ import koreaImgUrl from '../assets/Korea.jpg';
 import japanImgUrl from '../assets/Japan.jpg';
 import banffImgUrl from '../assets/Banff.jpg';
 import australiaImgUrl from '../assets/Australia.jpg';
+import creteImgUrl from '../assets/Crete.jpg';
 
 /**
  * Data model representing the full page
@@ -199,6 +200,12 @@ export class FullPageData{
             title: "Travel",
             body: "I love to travel, and I've been lucky enough to visit 15 countries and 5 continents so far. I've included some of my favorite trips below, and I'm always looking for new places to explore.",
             style: BodyBlockStyle.titleBlock,
+        });
+        sectionData.bodyTextSections.push({
+            title: "Crete",
+            body: "I visited Crete in the summer of 2024 with my partner. We spent three days in Chania, and enjoyed the beautiful beaches, the delicious food, and the many historical sites. We especially enjoyed our evening at a winery in the hills outside Chania, where we learned about the native Cretan grape varietals.",
+            style: BodyBlockStyle.imageBlock,
+            imagePath: creteImgUrl
         });
         sectionData.bodyTextSections.push({
             title: "Japan",
