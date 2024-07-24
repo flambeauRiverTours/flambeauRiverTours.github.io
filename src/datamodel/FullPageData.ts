@@ -158,6 +158,11 @@ export class FullPageData{
             style: BodyBlockStyle.titleBlock,
         });
         sectionData.bodyTextSections.push({
+            title: "Battle Cry of Freedom: The Civil War Era",
+            body: "I found this book to be an incredibly comprehensive re-telling of the American Civil. It managed to maintain a strong narrative arc despite the long time period covered and the relative chaos of the time. Particularly interesting to me was the coverage of the series of diplomatic incidents leading up to the civil war, a time period that I had little knowledge of.",
+            style: BodyBlockStyle.contentBlock,
+        })
+        sectionData.bodyTextSections.push({
             title: "Autumn in the Heavenly Kingdom",
             body: "I went into this book with little knowledge of the Chinese Civil War. As a result, I found the book to be a fascinating and informative read. Platt's contextualization of the events of the war within the broader goings-on of the time period was a particular highlight - before reading this book I would've thought it was a joke if you told me that China was in some way involved in the American Civil War, but this book shows the impact this conflict had, in particular through contrasting Britain's handling of these wars as they occurred simultaneously. This was a bit dense at times, but definitely worth the read.",
             style: BodyBlockStyle.contentBlock,
