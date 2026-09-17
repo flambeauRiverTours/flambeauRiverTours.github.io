@@ -1,66 +1,63 @@
+import { useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
+import { User, Briefcase, Code2, BookOpen, Compass } from 'lucide-react';
+import { Sidebar } from './components/Navigation/Sidebar';
+import { Navbar } from './components/Navigation/Navbar';
+import { AboutSection } from './components/Sections/AboutSection';
+import { CareerSection } from './components/Sections/CareerSection';
+import { ProjectsSection } from './components/Sections/ProjectsSection';
+import { ReadingSection } from './components/Sections/ReadingSection';
+import { TravelSection } from './components/Sections/TravelSection';
 
-import BodyBlock from './components/Body/BodyBlock'
-import './App.scss'
-import Sidebar from './components/Sidebar/Sidebar'
-import Row from 'react-bootstrap/Row'
-import Col from 'react-bootstrap/Col'
-import { FullPageData } from './datamodel/FullPageData'
-import { useState } from "react";
-import { ISectionData } from './datamodel/SectionData'
-import HeaderBar from './components/Header/HeaderBar'
+const TABS = [
+  { id: 'about', label: 'About Me', icon: User },
+  { id: 'career', label: 'My Career', icon: Briefcase },
+  { id: 'projects', label: 'My Projects', icon: Code2 },
+  { id: 'reading', label: 'My Reading List', icon: BookOpen },
+  { id: 'travel', label: 'My Travel', icon: Compass },
+];
 
-
-function App() {
-  const collapseWidth = 1000; //width in px at which the sidebar collapses
-  const pageData = new FullPageData();
-  const [activeBodyBlockIndex, setActiveBodyBlock] = useState(0);
-  const [nextBodyBlock, setNextBodyBlock] = useState(-1);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(window.innerWidth < collapseWidth); //true if the sidebar is collapsed, false otherwise
-
-  //handler for when a button is clicked in the sidebar. Changes the active body block
-  const sidebarButtonSelectionCallback = (index: number) =>{
-    if (index !== activeBodyBlockIndex) {
-      //when a button is pressed, first tell the current body block to fade out
-      setActiveBodyBlock(-1);
-      //then set the next body block to be the one that was clicked
-      setNextBodyBlock(index); 
-    }
-  }
-
-  //handler for when the body block finishes fading out. Changes the active body block to the next body block
-  const bodyBlockFadeOutCallback = () =>{
-    setActiveBodyBlock(nextBodyBlock);
-  }
-
-  //handler for when the window is resized. Collapses the sidebar if the window is too small
-  window.onresize = () => {
-    if (window.innerWidth < collapseWidth) {
-      //if the window is less than the collapse width, collapse the sidebar
-      setSidebarCollapsed(true);
-    }
-    else{
-      setSidebarCollapsed(false);
-    }
-  }
+export function App() {
+  const [activeTab, setActiveTab] = useState<string>('about');
 
   return (
-    <>
-      { sidebarCollapsed ? <HeaderBar activeIndex={activeBodyBlockIndex} buttonTitles={pageData.getButtonTitles()} buttonSelectionCallback={sidebarButtonSelectionCallback}></HeaderBar> : null}
-        <Row>
-          {sidebarCollapsed ?  null :
-          <Col xs={2} className='bg-secondary border-secondary sidebarColumn' style={{paddingRight: "0px"}}>
-            <Sidebar activeIndex={activeBodyBlockIndex} buttonTitles={pageData.getButtonTitles()} buttonSelectionCallback={sidebarButtonSelectionCallback} ></Sidebar>
-          </Col> 
-          }
-          
-          <Col>
-            {pageData.getSectionDataArray().map((sectionData: ISectionData, index: number) =>{
-              return <BodyBlock sectionData={sectionData} visible={index === activeBodyBlockIndex} afterFadeOut={bodyBlockFadeOutCallback}></BodyBlock>
-            })}
-          </Col>
-        </Row>
-    </>
-  )
+    <div className="min-h-screen relative bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-blue-500 selection:text-white">
+      {/* Background ambient lighting glows */}
+      <div className="fixed top-0 left-1/4 w-96 h-96 bg-blue-500/10 dark:bg-sky-500/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2"></div>
+      <div className="fixed bottom-0 right-1/4 w-96 h-96 bg-indigo-500/10 dark:bg-blue-600/10 rounded-full blur-3xl pointer-events-none translate-y-1/2"></div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 min-h-screen flex flex-col justify-between">
+        <div className="space-y-6">
+          {/* Mobile Top Navbar */}
+          <Navbar activeTab={activeTab} setActiveTab={setActiveTab} tabs={TABS} />
+
+          {/* Main Grid Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* Desktop Sidebar Navigation */}
+            <div className="hidden lg:block lg:col-span-4 xl:col-span-3 sticky top-8">
+              <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} tabs={TABS} />
+            </div>
+
+            {/* Main Content Body */}
+            <main className="lg:col-span-8 xl:col-span-9 min-h-[80vh]">
+              <AnimatePresence mode="wait">
+                {activeTab === 'about' && <AboutSection key="about" />}
+                {activeTab === 'career' && <CareerSection key="career" />}
+                {activeTab === 'projects' && <ProjectsSection key="projects" />}
+                {activeTab === 'reading' && <ReadingSection key="reading" />}
+                {activeTab === 'travel' && <TravelSection key="travel" />}
+              </AnimatePresence>
+            </main>
+          </div>
+        </div>
+
+        {/* Minimalist Footer */}
+        <footer className="mt-12 pt-6 border-t border-slate-200/50 dark:border-slate-800/50 text-center text-xs text-slate-500 dark:text-slate-400">
+          <p>© {new Date().getFullYear()} Jack Treadwell. Built with React, TypeScript, Vite & Tailwind CSS.</p>
+        </footer>
+      </div>
+    </div>
+  );
 }
 
-export default App
+export default App;
