@@ -77,7 +77,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, tabs 
           download="CV - Jack Treadwell.pdf"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 w-full px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-slate-100 text-slate-50 dark:text-slate-900 font-medium text-xs hover:bg-slate-800 dark:hover:bg-white transition-all shadow-sm"
+          className="btn-primary"
         >
           <FileText className="w-3.5 h-3.5" />
           <span>Download CV</span>
@@ -87,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, tabs 
           <a
             href={`mailto:${personalInfo.email}`}
             title="Email"
-            className="p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:text-blue-600 dark:hover:text-sky-400 transition-colors"
+            className="icon-btn hover:text-blue-600 dark:hover:text-sky-400"
           >
             <Mail className="w-4 h-4" />
           </a>
@@ -96,7 +96,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, tabs 
             target="_blank"
             rel="noopener noreferrer"
             title="GitHub"
-            className="p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
+            className="icon-btn hover:text-slate-900 dark:hover:text-slate-100"
           >
             <GithubIcon className="w-4 h-4" />
           </a>
@@ -105,7 +105,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, tabs 
             target="_blank"
             rel="noopener noreferrer"
             title="LinkedIn"
-            className="p-2 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-800/50 hover:text-blue-600 dark:hover:text-sky-400 transition-colors"
+            className="icon-btn hover:text-blue-600 dark:hover:text-sky-400"
           >
             <LinkedinIcon className="w-4 h-4" />
           </a>
