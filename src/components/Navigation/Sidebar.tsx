@@ -31,7 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, tabs 
           <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
             {personalInfo.name}
           </h1>
-          <p className="text-xs text-blue-600 dark:text-sky-400 font-medium mt-1">
+          <p className="text-xs text-teal-700 dark:text-teal-300 font-medium mt-1">
             {personalInfo.title}
           </p>
 
@@ -53,18 +53,18 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, tabs 
                 onClick={() => setActiveTab(tab.id)}
                 className={`relative flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 cursor-pointer ${
                   isActive
-                    ? 'text-blue-600 dark:text-sky-400 font-semibold'
+                    ? 'text-teal-700 dark:text-teal-300 font-semibold'
                     : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/40 dark:hover:bg-slate-800/40'
                 }`}
               >
                 {isActive && (
                   <motion.div
                     layoutId="activeTabBackground"
-                    className="absolute inset-0 bg-blue-500/10 dark:bg-sky-500/15 border border-blue-500/20 dark:border-sky-500/30 rounded-xl"
+                    className="absolute inset-0 bg-teal-500/10 dark:bg-teal-500/15 border border-teal-500/20 dark:border-teal-500/30 rounded-xl"
                     transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                   />
                 )}
-                <Icon className={`w-4 h-4 relative z-10 ${isActive ? 'text-blue-600 dark:text-sky-400' : 'text-slate-400 dark:text-slate-500'}`} />
+                <Icon className={`w-4 h-4 relative z-10 ${isActive ? 'text-teal-600 dark:text-teal-400' : 'text-slate-400 dark:text-slate-500'}`} />
                 <span className="relative z-10">{tab.label}</span>
               </button>
             );
@@ -89,7 +89,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, tabs 
           <a
             href={`mailto:${personalInfo.email}`}
             title="Email"
-            className="icon-btn hover:text-blue-600 dark:hover:text-sky-400"
+            className="icon-btn hover:text-teal-600 dark:hover:text-teal-400"
           >
             <Mail className="w-4 h-4" />
           </a>
@@ -107,7 +107,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, tabs 
             target="_blank"
             rel="noopener noreferrer"
             title="LinkedIn"
-            className="icon-btn hover:text-blue-600 dark:hover:text-sky-400"
+            className="icon-btn hover:text-teal-600 dark:hover:text-teal-400"
           >
             <LinkedinIcon className="w-4 h-4" />
           </a>

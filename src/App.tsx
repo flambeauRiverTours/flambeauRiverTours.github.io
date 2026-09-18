@@ -1,27 +1,23 @@
 import { useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { User, Briefcase, Code2, BookOpen, Compass } from 'lucide-react';
+import { User, Briefcase, Layers } from 'lucide-react';
 import { Sidebar } from './components/Navigation/Sidebar';
 import { Navbar } from './components/Navigation/Navbar';
 import { AboutSection } from './components/Sections/AboutSection';
 import { CareerSection } from './components/Sections/CareerSection';
 import { ProjectsSection } from './components/Sections/ProjectsSection';
-import { ReadingSection } from './components/Sections/ReadingSection';
-import { TravelSection } from './components/Sections/TravelSection';
 
 const TABS = [
-  { id: 'about', label: 'About Me', icon: User },
+  { id: 'about', label: 'Executive Overview', icon: User },
   { id: 'career', label: 'My Career', icon: Briefcase },
-  { id: 'projects', label: 'My Projects', icon: Code2 },
-  { id: 'reading', label: 'My Reading List', icon: BookOpen },
-  { id: 'travel', label: 'My Travel', icon: Compass },
+  { id: 'projects', label: 'Case Studies', icon: Layers },
 ];
 
 export function App() {
   const [activeTab, setActiveTab] = useState<string>('about');
 
   return (
-    <div className="min-h-screen relative bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-blue-500 selection:text-white">
+    <div className="min-h-screen relative bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-teal-500 selection:text-white">
       {/* Background ambient lighting glows */}
       <div className="fixed top-0 left-1/4 w-96 h-96 bg-teal-500/10 dark:bg-emerald-500/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2"></div>
       <div className="fixed bottom-0 right-1/4 w-96 h-96 bg-amber-500/10 dark:bg-teal-700/10 rounded-full blur-3xl pointer-events-none translate-y-1/2"></div>
@@ -44,8 +40,6 @@ export function App() {
                 {activeTab === 'about' && <AboutSection key="about" />}
                 {activeTab === 'career' && <CareerSection key="career" />}
                 {activeTab === 'projects' && <ProjectsSection key="projects" />}
-                {activeTab === 'reading' && <ReadingSection key="reading" />}
-                {activeTab === 'travel' && <TravelSection key="travel" />}
               </AnimatePresence>
             </main>
           </div>
