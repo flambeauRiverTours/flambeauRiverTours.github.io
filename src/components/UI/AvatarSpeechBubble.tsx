@@ -81,7 +81,7 @@ export const AvatarSpeechBubble: React.FC<AvatarSpeechBubbleProps> = ({
         transition={{ type: 'spring', stiffness: 450, damping: 28 }}
         className={`absolute z-50 text-left bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl p-5 shadow-2xl border-2 border-teal-500/40 dark:border-teal-400/40 ${
           isSidebar
-            ? 'left-full top-0 ml-5 w-[24rem] sm:w-[28rem] lg:w-[30rem]'
+            ? 'left-full top-0 ml-5 w-[22rem] sm:w-[26rem] lg:w-[28rem]'
             : 'top-full left-0 mt-3 w-[calc(100vw-2rem)] max-w-md'
         }`}
         onClick={(e) => e.stopPropagation()}

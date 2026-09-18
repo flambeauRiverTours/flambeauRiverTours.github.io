@@ -48,7 +48,7 @@ export function App() {
           {/* Main Grid Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* Desktop Sidebar Navigation */}
-            <div className="hidden lg:block lg:col-span-4 xl:col-span-3">
+            <div className="hidden lg:block lg:col-span-4 xl:col-span-3 relative z-30">
               <Sidebar
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
