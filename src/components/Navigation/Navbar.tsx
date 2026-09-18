@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, FileText, Mail } from 'lucide-react';
+import { Menu, X, FileText, Mail, Sparkles } from 'lucide-react';
 import { personalInfo } from '../../datamodel/portfolioData';
 import { GithubIcon, LinkedinIcon } from '../UI/SocialIcons';
 
@@ -8,9 +8,10 @@ interface NavbarProps {
   activeTab: string;
   setActiveTab: (tabId: string) => void;
   tabs: { id: string; label: string; icon: React.ComponentType<{ className?: string }> }[];
+  onOpenAI: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, tabs }) => {
+export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, tabs, onOpenAI }) => {
   const [isOpen, setIsOpen] = useState(false);
   const activeTabObj = tabs.find((t) => t.id === activeTab);
 
@@ -18,24 +19,43 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, tabs })
     <header className="lg:hidden sticky top-0 z-40 w-full px-4 py-3 glass-panel border-b border-slate-200/50 dark:border-slate-800/50 backdrop-blur-md">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <img
-            src={personalInfo.avatarUrl}
-            alt={personalInfo.name}
-            className="w-10 h-10 rounded-full object-cover border border-white/80 dark:border-slate-700/80 shadow-sm"
-          />
+          <div
+            onClick={onOpenAI}
+            className="relative cursor-pointer"
+            title="Click to Chat with Jack's AI Assistant"
+          >
+            <img
+              src={personalInfo.avatarUrl}
+              alt={personalInfo.name}
+              className="w-10 h-10 rounded-full object-cover border border-white/80 dark:border-slate-700/80 shadow-sm"
+            />
+            <span className="absolute -bottom-1 -right-1 p-0.5 rounded-full bg-teal-600 text-white text-[9px]">
+              <Sparkles className="w-2 h-2" />
+            </span>
+          </div>
           <div>
             <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100">{personalInfo.name}</h1>
             <p className="text-[11px] text-teal-600 dark:text-teal-400 font-medium">{activeTabObj?.label}</p>
           </div>
         </div>
 
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="p-2.5 rounded-xl glass-panel text-slate-700 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors"
-          aria-label="Toggle Navigation Menu"
-        >
-          {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onOpenAI}
+            className="px-2.5 py-1.5 rounded-xl bg-teal-600/10 text-teal-700 dark:text-teal-300 border border-teal-500/20 text-xs font-bold flex items-center gap-1 cursor-pointer"
+          >
+            <Sparkles className="w-3 h-3 text-amber-500" />
+            <span>Ask AI</span>
+          </button>
+
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="p-2.5 rounded-xl glass-panel text-slate-700 dark:text-slate-300 hover:bg-slate-200/50 dark:hover:bg-slate-800/50 transition-colors"
+            aria-label="Toggle Navigation Menu"
+          >
+            {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>

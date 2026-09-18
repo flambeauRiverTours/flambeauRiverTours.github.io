@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { User, Briefcase, Layers } from 'lucide-react';
 import { Sidebar } from './components/Navigation/Sidebar';
@@ -6,6 +6,7 @@ import { Navbar } from './components/Navigation/Navbar';
 import { AboutSection } from './components/Sections/AboutSection';
 import { CareerSection } from './components/Sections/CareerSection';
 import { ProjectsSection } from './components/Sections/ProjectsSection';
+import { AvatarSpeechModal } from './components/UI/AvatarSpeechModal';
 
 const TABS = [
   { id: 'about', label: 'Executive Overview', icon: User },
@@ -15,6 +16,18 @@ const TABS = [
 
 export function App() {
   const [activeTab, setActiveTab] = useState<string>('about');
+  const [isAIOpen, setIsAIOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsAIOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <div className="min-h-screen relative bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-teal-500 selection:text-white">
@@ -25,13 +38,23 @@ export function App() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 min-h-screen flex flex-col justify-between">
         <div className="space-y-6">
           {/* Mobile Top Navbar */}
-          <Navbar activeTab={activeTab} setActiveTab={setActiveTab} tabs={TABS} />
+          <Navbar
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            tabs={TABS}
+            onOpenAI={() => setIsAIOpen(true)}
+          />
 
           {/* Main Grid Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             {/* Desktop Sidebar Navigation */}
             <div className="hidden lg:block lg:col-span-4 xl:col-span-3">
-              <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} tabs={TABS} />
+              <Sidebar
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+                tabs={TABS}
+                onOpenAI={() => setIsAIOpen(true)}
+              />
             </div>
 
             {/* Main Content Body */}
@@ -50,6 +73,13 @@ export function App() {
           <p>© {new Date().getFullYear()} Jack Treadwell. Built with React, TypeScript, Vite & Tailwind CSS.</p>
         </footer>
       </div>
+
+      {/* AI Assistant Avatar Speech Popover */}
+      <AvatarSpeechModal
+        isOpen={isAIOpen}
+        onClose={() => setIsAIOpen(false)}
+        setActiveTab={setActiveTab}
+      />
     </div>
   );
 }
