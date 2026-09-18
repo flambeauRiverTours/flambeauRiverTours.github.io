@@ -38,21 +38,20 @@
 
 .glass-panel {
   background: var(--card-bg);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1.5px dashed var(--card-border);
-  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 2px dashed #d97706;
+  border-radius: 1.25rem;
+  box-shadow: 4px 4px 0px 0px rgba(217, 119, 6, 0.15);
 }
 
 .glass-panel-hover {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease-in-out;
 }
 
 .glass-panel-hover:hover {
-  background: rgba(255, 255, 255, 0.75);
-  border-color: rgba(255, 255, 255, 0.9);
-  transform: translateY(-2px);
-  box-shadow: 0 12px 40px 0 rgba(31, 38, 135, 0.12);
+  transform: rotate(-0.5deg) translateY(-3px);
+  box-shadow: 6px 6px 0px 0px rgba(217, 119, 6, 0.25);
 }
 
 @media (prefers-color-scheme: dark) {
