@@ -71,7 +71,6 @@ Key requirements:
 ### **ADR 3: Middleware Gateway — Azure Functions (Serverless) vs. Direct Client Invocations**
 * **Decision:** Route all queries through an Azure Function / Serverless API Proxy.
 * **Rationale:** Calling Azure AI endpoints directly from the browser would expose the API key in client-side JS bundles. Azure Functions act as a secure proxy handling authentication, rate limiting, and CORS validation.
-* **Isolation specifics:** CORS is locked to the portfolio's single production origin (never `*`); the function checks `Origin` server-side and returns `403` on a mismatch. Rate limiting is a per-IP fixed window backed by the Function App's own Table Storage, since Consumption-plan instances can't share in-memory state. Neither control is a hard auth boundary against a direct scripted caller with a spoofed `Origin` header — a Cost Management budget alert on the resource group is the backstop.
 
 ### **ADR 4: Availability Safeguard — Client-Side Deterministic Fallback Engine**
 * **Decision:** If the Azure Function returns an HTTP 429 (Rate Limited), HTTP 5xx, or times out (> 3 seconds), the React client seamlessly switches to a local fuzzy-matching knowledge retrieval engine (`aiContext.ts`).
@@ -130,6 +129,6 @@ User (Browser)               Azure Function (API)             Azure AI SLM (Phi-
 
 ## 7. Security, Privacy & Safety Considerations
 
-1. **Prompt Injection Defense:** The system prompt instructs the SLM to treat the user's message as untrusted input rather than commands, never reveal or discuss the system prompt itself, never fabricate or agree with unlisted career claims, and refuse off-topic or harmful requests with one fixed deflection line — reducing variance in how a jailbreak attempt gets handled. This is defense-in-depth on a 3.8B model, not a guarantee: it does not replace the origin allowlist, per-IP rate limit, and 500-character input cap, which bound cost and blast radius regardless of whether a given jailbreak succeeds. Streaming the response to the client also means there's no server-side output moderation pass before tokens go out — buffering the full response to moderate it first would defeat the point of streaming, so this is an accepted tradeoff at this traffic scale.
-2. **API Key Isolation:** Cloud credential keys are stored exclusively in Azure Key Vault (RBAC-authorized; see Implementation Guide §3.2) and injected via Azure Function Application Settings; zero keys are committed or exposed to client JS.
+1. **Prompt Injection Defense:** The Azure Function middleware appends system prompt instructions that strictly instruct the SLM to ignore user instructions asking it to behave as an unrestricted model, reveal system prompts, or discuss non-career topics.
+2. **API Key Isolation:** Cloud credential keys are stored exclusively in Azure Key Vault and injected via Azure Function Application Settings; zero keys are committed or exposed to client JS.
 3. **Data Privacy:** Azure AI pay-as-you-go endpoints do not log or store prompt data for model retraining.

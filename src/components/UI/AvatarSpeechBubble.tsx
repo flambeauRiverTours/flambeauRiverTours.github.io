@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Send, ArrowRight, Bot } from 'lucide-react';
 import { QUICK_PROMPTS, queryAIAssistant, AIResponse } from '../../datamodel/aiContext';
 import { personalInfo } from '../../datamodel/portfolioData';
+import { streamAIChat } from '../../services/aiStreamService';
 
 interface AvatarSpeechBubbleProps {
   isOpen: boolean;
@@ -19,7 +20,9 @@ export const AvatarSpeechBubble: React.FC<AvatarSpeechBubbleProps> = ({
 }) => {
   const [query, setQuery] = useState('');
   const [currentResponse, setCurrentResponse] = useState<AIResponse | null>(null);
+  const [streamedText, setStreamedText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
 
@@ -44,6 +47,7 @@ export const AvatarSpeechBubble: React.FC<AvatarSpeechBubbleProps> = ({
     } else {
       setQuery('');
       setCurrentResponse(null);
+      setStreamedText('');
     }
   }, [isOpen, onClose]);
 
@@ -60,16 +64,40 @@ export const AvatarSpeechBubble: React.FC<AvatarSpeechBubbleProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  const handleAsk = (userPrompt: string) => {
+  const handleAsk = async (userPrompt: string) => {
     if (!userPrompt.trim()) return;
     setIsTyping(true);
+    setIsStreaming(true);
     setQuery(userPrompt);
+    setStreamedText('');
+    setCurrentResponse(null);
 
-    setTimeout(() => {
-      const res = queryAIAssistant(userPrompt);
-      setCurrentResponse(res);
-      setIsTyping(false);
-    }, 300);
+    let accumulatedText = '';
+
+    await streamAIChat(
+      userPrompt,
+      (token) => {
+        setIsTyping(false);
+        accumulatedText += token;
+        setStreamedText(accumulatedText);
+      },
+      () => {
+        // Fallback to local context engine
+        const fallbackRes = queryAIAssistant(userPrompt);
+        setCurrentResponse(fallbackRes);
+        setIsTyping(false);
+        setIsStreaming(false);
+      }
+    );
+
+    if (accumulatedText) {
+      setCurrentResponse({
+        answer: accumulatedText,
+        sourceTab: 'about',
+        sourceTitle: 'Azure AI Phi-3 Stream'
+      });
+      setIsStreaming(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -84,10 +112,10 @@ export const AvatarSpeechBubble: React.FC<AvatarSpeechBubbleProps> = ({
         animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, x: isSidebar ? -10 : 0, y: isSidebar ? 0 : -10 }}
         transition={{ type: 'spring', stiffness: 450, damping: 28 }}
-        className={`absolute z-50 text-left bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl p-3.5 shadow-2xl border-2 border-teal-500/40 dark:border-teal-400/40 ${
+        className={`absolute z-50 text-left bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl p-4 shadow-2xl border-2 border-teal-500/40 dark:border-teal-400/40 ${
           isSidebar
-            ? 'left-full top-0 ml-4 w-[17rem] sm:w-[19rem] lg:w-[21rem]'
-            : 'top-full left-0 mt-3 w-[calc(100vw-2rem)] max-w-xs'
+            ? 'left-full top-0 ml-4 w-[19rem] sm:w-[22rem] lg:w-[24rem]'
+            : 'top-full left-0 mt-3 w-[calc(100vw-2rem)] max-w-sm'
         }`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
@@ -155,7 +183,7 @@ export const AvatarSpeechBubble: React.FC<AvatarSpeechBubbleProps> = ({
           />
           <button
             type="submit"
-            disabled={!query.trim() || isTyping}
+            disabled={!query.trim() || isTyping || isStreaming}
             aria-label="Send Query"
             className="px-2.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white font-semibold text-[11px] transition-all flex items-center gap-1 shadow-sm cursor-pointer"
           >
@@ -189,15 +217,15 @@ export const AvatarSpeechBubble: React.FC<AvatarSpeechBubbleProps> = ({
             </div>
           )}
 
-          {!isTyping && currentResponse && (
+          {(streamedText || currentResponse) && (
             <motion.div
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               className="space-y-2 p-2.5 rounded-xl bg-teal-500/10 dark:bg-teal-500/15 border border-teal-500/20 text-slate-800 dark:text-slate-200 text-[11px] sm:text-xs leading-relaxed"
             >
-              <p>{currentResponse.answer}</p>
+              <p>{streamedText || currentResponse?.answer}</p>
 
-              {currentResponse.sourceTab && (
+              {currentResponse?.sourceTab && (
                 <div className="pt-1.5 flex items-center justify-between border-t border-teal-500/20 text-[10px]">
                   <span className="text-slate-500 dark:text-slate-400 font-medium truncate max-w-[12rem]">
                     Source: <strong className="text-teal-700 dark:text-teal-300">{currentResponse.sourceTitle}</strong>
