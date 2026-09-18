@@ -8,10 +8,9 @@ export interface AIResponse {
 }
 
 export const QUICK_PROMPTS = [
-  "How did Jack manage his team of 9 engineers?",
-  "How did Jack scale physician billing to 3M+ transactions?",
-  "What AWS and Kubernetes certifications does Jack hold?",
-  "Tell me about Jack's full-stack technical architecture experience."
+  "Team leadership & 9 engineers managed?",
+  "Scaling billing to 3M+ transactions?",
+  "AWS & Kubernetes certifications?"
 ];
 
 export function queryAIAssistant(userQuery: string): AIResponse {

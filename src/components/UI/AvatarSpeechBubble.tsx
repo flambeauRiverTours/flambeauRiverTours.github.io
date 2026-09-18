@@ -84,10 +84,10 @@ export const AvatarSpeechBubble: React.FC<AvatarSpeechBubbleProps> = ({
         animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, x: isSidebar ? -10 : 0, y: isSidebar ? 0 : -10 }}
         transition={{ type: 'spring', stiffness: 450, damping: 28 }}
-        className={`absolute z-50 text-left bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl p-4 shadow-2xl border-2 border-teal-500/40 dark:border-teal-400/40 ${
+        className={`absolute z-50 text-left bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl p-3.5 shadow-2xl border-2 border-teal-500/40 dark:border-teal-400/40 ${
           isSidebar
-            ? 'left-full top-0 ml-4 w-[19rem] sm:w-[22rem] lg:w-[24rem]'
-            : 'top-full left-0 mt-3 w-[calc(100vw-2rem)] max-w-sm'
+            ? 'left-full top-0 ml-4 w-[17rem] sm:w-[19rem] lg:w-[21rem]'
+            : 'top-full left-0 mt-3 w-[calc(100vw-2rem)] max-w-xs'
         }`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"

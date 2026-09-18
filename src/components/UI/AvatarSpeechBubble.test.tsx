@@ -17,7 +17,7 @@ describe('AvatarSpeechBubble', () => {
     const handleSetTab = vi.fn();
     render(<AvatarSpeechBubble isOpen={true} onClose={handleClose} setActiveTab={handleSetTab} />);
 
-    const promptChip = screen.getByText('How did Jack manage his team of 9 engineers?');
+    const promptChip = screen.getByText('Team leadership & 9 engineers managed?');
     fireEvent.click(promptChip);
 
     // Wait for response text to appear
