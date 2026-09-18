@@ -23,8 +23,8 @@ export function App() {
   return (
     <div className="min-h-screen relative bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-blue-500 selection:text-white">
       {/* Background ambient lighting glows */}
-      <div className="fixed top-0 left-1/4 w-96 h-96 bg-blue-500/10 dark:bg-sky-500/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2"></div>
-      <div className="fixed bottom-0 right-1/4 w-96 h-96 bg-indigo-500/10 dark:bg-blue-600/10 rounded-full blur-3xl pointer-events-none translate-y-1/2"></div>
+      <div className="fixed top-0 left-1/4 w-96 h-96 bg-teal-500/10 dark:bg-emerald-500/10 rounded-full blur-3xl pointer-events-none -translate-y-1/2"></div>
+      <div className="fixed bottom-0 right-1/4 w-96 h-96 bg-amber-500/10 dark:bg-teal-700/10 rounded-full blur-3xl pointer-events-none translate-y-1/2"></div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8 min-h-screen flex flex-col justify-between">
         <div className="space-y-6">
