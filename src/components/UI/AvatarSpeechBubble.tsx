@@ -26,20 +26,27 @@ export const AvatarSpeechBubble: React.FC<AvatarSpeechBubbleProps> = ({
   // Close when clicking outside the speech bubble
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (bubbleRef.current && !bubbleRef.current.contains(event.target as Node)) {
-        onClose();
+      const target = event.target as Node;
+      // Do not close if clicking inside bubbleRef
+      if (bubbleRef.current && bubbleRef.current.contains(target)) {
+        return;
       }
+      onClose();
     };
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      // Use setTimeout so the initial trigger click event finishes propagating before attaching listener
+      const timer = setTimeout(() => {
+        document.addEventListener('click', handleClickOutside);
+      }, 50);
       setTimeout(() => inputRef.current?.focus(), 100);
+      return () => {
+        clearTimeout(timer);
+        document.removeEventListener('click', handleClickOutside);
+      };
     } else {
       setQuery('');
       setCurrentResponse(null);
     }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
   }, [isOpen, onClose]);
 
   // Escape key and ⌘K listener
