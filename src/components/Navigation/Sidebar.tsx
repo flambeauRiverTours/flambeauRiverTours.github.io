@@ -21,7 +21,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, tabs,
         <div className="flex flex-col items-center text-center pb-6 border-b border-slate-200/50 dark:border-slate-800/50">
           <div className="relative mb-4">
             <div
-              onClick={() => setIsAIOpen((prev) => !prev)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsAIOpen((prev) => !prev);
+              }}
               className="relative group cursor-pointer"
               title="Click to Chat with Jack's AI Assistant (⌘K)"
             >

@@ -22,7 +22,10 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, tabs, i
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 relative">
           <div
-            onClick={() => setIsAIOpen((prev) => !prev)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsAIOpen((prev) => !prev);
+            }}
             className="relative cursor-pointer"
             title="Click to Chat with Jack's AI Assistant"
           >
@@ -52,7 +55,10 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, tabs, i
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setIsAIOpen((prev) => !prev)}
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsAIOpen((prev) => !prev);
+            }}
             className="px-2.5 py-1.5 rounded-xl bg-teal-600/10 text-teal-700 dark:text-teal-300 border border-teal-500/20 text-xs font-bold flex items-center gap-1 cursor-pointer"
           >
             <Sparkles className="w-3 h-3 text-amber-500" />
