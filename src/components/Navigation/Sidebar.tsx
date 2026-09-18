@@ -17,13 +17,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, tabs 
       <div>
         <div className="flex flex-col items-center text-center pb-6 border-b border-slate-200/50 dark:border-slate-800/50">
           <div className="relative group mb-4">
-            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-cyan-500 rounded-full blur opacity-25 group-hover:opacity-75 transition duration-500"></div>
-            <img
+            <div className="absolute -inset-1.5 bg-gradient-to-r from-teal-500 via-amber-400 to-emerald-500 rounded-full blur opacity-30 group-hover:opacity-100 group-hover:animate-spin transition duration-1000"></div>
+            <motion.img
+              whileHover={{ scale: 1.05, rotate: [0, -3, 3, 0] }}
+              transition={{ duration: 0.4 }}
               src={personalInfo.avatarUrl}
               alt={personalInfo.name}
-              className="relative w-28 h-28 rounded-full object-cover border-2 border-white/80 dark:border-slate-700/80 shadow-md"
+              className="relative w-28 h-28 rounded-full object-cover border-2 border-white/80 dark:border-slate-700/80 shadow-md cursor-pointer"
             />
-            <span className="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" title="Open to Opportunities"></span>
+            <span className="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full animate-pulse" title="Open to Opportunities"></span>
           </div>
 
           <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">

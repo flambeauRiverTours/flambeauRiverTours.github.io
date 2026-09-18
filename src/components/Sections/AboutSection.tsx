@@ -24,10 +24,14 @@ export const AboutSection: React.FC = () => {
 
           <div className="absolute bottom-6 left-6 right-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-300 border border-blue-400/30 backdrop-blur-md mb-2">
-                <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-                <span>Berlin, Germany</span>
-              </span>
+              <motion.span
+                animate={{ rotate: [0, 5, -5, 0] }}
+                transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-teal-500/20 text-teal-200 border border-teal-400/30 backdrop-blur-md mb-2 cursor-default"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-spin" style={{ animationDuration: '6s' }} />
+                <span>Berlin, Germany ✨</span>
+              </motion.span>
               <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
                 {personalInfo.name}
               </h2>

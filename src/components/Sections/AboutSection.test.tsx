@@ -8,7 +8,7 @@ describe('AboutSection', () => {
     render(<AboutSection />);
     expect(screen.getByText(personalInfo.name)).toBeInTheDocument();
     expect(screen.getByText(personalInfo.title)).toBeInTheDocument();
-    expect(screen.getByText(personalInfo.location)).toBeInTheDocument();
+    expect(screen.getByText((content) => content.includes(personalInfo.location))).toBeInTheDocument();
   });
 
   it('renders skill categories and skills', () => {
