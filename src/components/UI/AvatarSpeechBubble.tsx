@@ -164,18 +164,20 @@ export const AvatarSpeechBubble: React.FC<AvatarSpeechBubbleProps> = ({
           </button>
         </form>
 
-        {/* 3. Ultra-compact Prompt Pills */}
-        <div className="pt-2 flex flex-wrap gap-1">
-          {QUICK_PROMPTS.map((prompt, idx) => (
-            <button
-              key={idx}
-              onClick={() => handleAsk(prompt)}
-              className="text-left px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-teal-500/20 hover:text-teal-700 dark:hover:text-teal-300 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-all cursor-pointer truncate max-w-[13rem]"
-              title={prompt}
-            >
-              {prompt}
-            </button>
-          ))}
+        {/* 3. Fully-responsive rounded Prompt Chips */}
+        <div className="pt-2 space-y-1">
+          <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">Quick prompts:</p>
+          <div className="flex flex-col gap-1">
+            {QUICK_PROMPTS.map((prompt, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleAsk(prompt)}
+                className="text-left px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-medium bg-slate-100 dark:bg-slate-800 hover:bg-teal-500/15 hover:text-teal-700 dark:hover:text-teal-300 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-all cursor-pointer leading-snug break-words"
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* 4. Output Answer Area */}
