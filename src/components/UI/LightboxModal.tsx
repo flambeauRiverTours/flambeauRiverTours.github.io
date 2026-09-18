@@ -11,14 +11,29 @@ interface LightboxModalProps {
 export const LightboxModal: React.FC<LightboxModalProps> = ({ item, onClose }) => {
   if (!item) return null;
 
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="lightbox-title"
+        onClick={onClose}
+      >
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           className="relative max-w-3xl w-full glass-panel rounded-2xl overflow-hidden shadow-2xl border border-white/20 dark:border-slate-700/50"
+          onClick={(e) => e.stopPropagation()}
         >
           {/* Close button */}
           <button
@@ -41,7 +56,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({ item, onClose }) =
           {/* Content */}
           <div className="p-6 space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <h3 id="lightbox-title" className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-blue-600 dark:text-sky-400" />
                 <span>{item.title}</span>
               </h3>
