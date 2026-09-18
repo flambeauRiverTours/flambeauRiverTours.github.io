@@ -3,24 +3,26 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, FileText, Mail, Sparkles } from 'lucide-react';
 import { personalInfo } from '../../datamodel/portfolioData';
 import { GithubIcon, LinkedinIcon } from '../UI/SocialIcons';
+import { AvatarSpeechBubble } from '../UI/AvatarSpeechBubble';
 
 interface NavbarProps {
   activeTab: string;
   setActiveTab: (tabId: string) => void;
   tabs: { id: string; label: string; icon: React.ComponentType<{ className?: string }> }[];
-  onOpenAI: () => void;
+  isAIOpen: boolean;
+  setIsAIOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, tabs, onOpenAI }) => {
+export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, tabs, isAIOpen, setIsAIOpen }) => {
   const [isOpen, setIsOpen] = useState(false);
   const activeTabObj = tabs.find((t) => t.id === activeTab);
 
   return (
     <header className="lg:hidden sticky top-0 z-40 w-full px-4 py-3 glass-panel border-b border-slate-200/50 dark:border-slate-800/50 backdrop-blur-md">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 relative">
           <div
-            onClick={onOpenAI}
+            onClick={() => setIsAIOpen((prev) => !prev)}
             className="relative cursor-pointer"
             title="Click to Chat with Jack's AI Assistant"
           >
@@ -33,15 +35,24 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, tabs, o
               <Sparkles className="w-2 h-2" />
             </span>
           </div>
+
           <div>
             <h1 className="text-sm font-bold text-slate-900 dark:text-slate-100">{personalInfo.name}</h1>
             <p className="text-[11px] text-teal-600 dark:text-teal-400 font-medium">{activeTabObj?.label}</p>
           </div>
+
+          {/* AI Speech Bubble Anchored directly under mobile header headshot */}
+          <AvatarSpeechBubble
+            isOpen={isAIOpen}
+            onClose={() => setIsAIOpen(false)}
+            setActiveTab={setActiveTab}
+            variant="navbar"
+          />
         </div>
 
         <div className="flex items-center gap-2">
           <button
-            onClick={onOpenAI}
+            onClick={() => setIsAIOpen((prev) => !prev)}
             className="px-2.5 py-1.5 rounded-xl bg-teal-600/10 text-teal-700 dark:text-teal-300 border border-teal-500/20 text-xs font-bold flex items-center gap-1 cursor-pointer"
           >
             <Sparkles className="w-3 h-3 text-amber-500" />

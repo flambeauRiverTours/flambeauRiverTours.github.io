@@ -3,38 +3,50 @@ import { motion } from 'framer-motion';
 import { Mail, FileText, MapPin, Sparkles } from 'lucide-react';
 import { personalInfo } from '../../datamodel/portfolioData';
 import { GithubIcon, LinkedinIcon } from '../UI/SocialIcons';
+import { AvatarSpeechBubble } from '../UI/AvatarSpeechBubble';
 
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tabId: string) => void;
   tabs: { id: string; label: string; icon: React.ComponentType<{ className?: string }> }[];
-  onOpenAI: () => void;
+  isAIOpen: boolean;
+  setIsAIOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, tabs, onOpenAI }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, tabs, isAIOpen, setIsAIOpen }) => {
   return (
-    <aside className="w-full flex flex-col justify-between p-6 glass-panel rounded-2xl">
+    <aside className="relative w-full flex flex-col justify-between p-6 glass-panel rounded-2xl">
       {/* Profile Header */}
       <div>
         <div className="flex flex-col items-center text-center pb-6 border-b border-slate-200/50 dark:border-slate-800/50">
-          <div
-            onClick={onOpenAI}
-            className="relative group mb-4 cursor-pointer"
-            title="Click to Chat with Jack's AI Assistant (⌘K)"
-          >
-            <div className="absolute -inset-1.5 bg-gradient-to-r from-teal-500 via-amber-400 to-emerald-500 rounded-full blur opacity-30 group-hover:opacity-100 group-hover:animate-spin transition duration-1000"></div>
-            <motion.img
-              whileHover={{ scale: 1.05, rotate: [0, -3, 3, 0] }}
-              transition={{ duration: 0.4 }}
-              src={personalInfo.avatarUrl}
-              alt={personalInfo.name}
-              className="relative w-28 h-28 rounded-full object-cover border-2 border-white/80 dark:border-slate-700/80 shadow-md"
+          <div className="relative mb-4">
+            <div
+              onClick={() => setIsAIOpen((prev) => !prev)}
+              className="relative group cursor-pointer"
+              title="Click to Chat with Jack's AI Assistant (⌘K)"
+            >
+              <div className="absolute -inset-1.5 bg-gradient-to-r from-teal-500 via-amber-400 to-emerald-500 rounded-full blur opacity-30 group-hover:opacity-100 group-hover:animate-spin transition duration-1000"></div>
+              <motion.img
+                whileHover={{ scale: 1.05, rotate: [0, -3, 3, 0] }}
+                transition={{ duration: 0.4 }}
+                src={personalInfo.avatarUrl}
+                alt={personalInfo.name}
+                className="relative w-28 h-28 rounded-full object-cover border-2 border-white/80 dark:border-slate-700/80 shadow-md"
+              />
+              <span className="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full animate-pulse" title="Open to Opportunities"></span>
+              <span className="absolute -bottom-2 -left-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-600 text-white shadow-md border border-teal-400/40 flex items-center gap-1">
+                <Sparkles className="w-2.5 h-2.5 text-amber-300" />
+                <span>Ask AI ✦</span>
+              </span>
+            </div>
+
+            {/* AI Speech Bubble Anchored directly to the right of the desktop sidebar headshot */}
+            <AvatarSpeechBubble
+              isOpen={isAIOpen}
+              onClose={() => setIsAIOpen(false)}
+              setActiveTab={setActiveTab}
+              variant="sidebar"
             />
-            <span className="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full animate-pulse" title="Open to Opportunities"></span>
-            <span className="absolute -bottom-2 -left-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-600 text-white shadow-md border border-teal-400/40 flex items-center gap-1">
-              <Sparkles className="w-2.5 h-2.5 text-amber-300" />
-              <span>Ask AI ✦</span>
-            </span>
           </div>
 
           <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">

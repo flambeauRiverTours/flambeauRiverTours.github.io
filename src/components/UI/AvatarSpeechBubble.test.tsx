@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { AvatarSpeechModal } from '../UI/AvatarSpeechModal';
+import { AvatarSpeechBubble } from '../UI/AvatarSpeechBubble';
 
-describe('AvatarSpeechModal', () => {
+describe('AvatarSpeechBubble', () => {
   it('triggers onClose when Escape key is pressed', () => {
     const handleClose = vi.fn();
     const handleSetTab = vi.fn();
-    render(<AvatarSpeechModal isOpen={true} onClose={handleClose} setActiveTab={handleSetTab} />);
+    render(<AvatarSpeechBubble isOpen={true} onClose={handleClose} setActiveTab={handleSetTab} />);
 
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(handleClose).toHaveBeenCalledTimes(1);
@@ -15,7 +15,7 @@ describe('AvatarSpeechModal', () => {
   it('executes AI query when clicking a suggested prompt chip', async () => {
     const handleClose = vi.fn();
     const handleSetTab = vi.fn();
-    render(<AvatarSpeechModal isOpen={true} onClose={handleClose} setActiveTab={handleSetTab} />);
+    render(<AvatarSpeechBubble isOpen={true} onClose={handleClose} setActiveTab={handleSetTab} />);
 
     const promptChip = screen.getByText('How did Jack manage his team of 9 engineers?');
     fireEvent.click(promptChip);

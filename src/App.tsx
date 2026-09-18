@@ -6,7 +6,6 @@ import { Navbar } from './components/Navigation/Navbar';
 import { AboutSection } from './components/Sections/AboutSection';
 import { CareerSection } from './components/Sections/CareerSection';
 import { ProjectsSection } from './components/Sections/ProjectsSection';
-import { AvatarSpeechModal } from './components/UI/AvatarSpeechModal';
 
 const TABS = [
   { id: 'about', label: 'Executive Overview', icon: User },
@@ -42,7 +41,8 @@ export function App() {
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             tabs={TABS}
-            onOpenAI={() => setIsAIOpen(true)}
+            isAIOpen={isAIOpen}
+            setIsAIOpen={setIsAIOpen}
           />
 
           {/* Main Grid Layout */}
@@ -53,7 +53,8 @@ export function App() {
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
                 tabs={TABS}
-                onOpenAI={() => setIsAIOpen(true)}
+                isAIOpen={isAIOpen}
+                setIsAIOpen={setIsAIOpen}
               />
             </div>
 
@@ -73,13 +74,6 @@ export function App() {
           <p>© {new Date().getFullYear()} Jack Treadwell. Built with React, TypeScript, Vite & Tailwind CSS.</p>
         </footer>
       </div>
-
-      {/* AI Assistant Avatar Speech Popover */}
-      <AvatarSpeechModal
-        isOpen={isAIOpen}
-        onClose={() => setIsAIOpen(false)}
-        setActiveTab={setActiveTab}
-      />
     </div>
   );
 }
