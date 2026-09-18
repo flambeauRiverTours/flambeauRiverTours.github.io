@@ -36,8 +36,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, tabs,
                 alt={personalInfo.name}
                 className="relative w-28 h-28 rounded-full object-cover border-2 border-white/80 dark:border-slate-700/80 shadow-md"
               />
-              <span className="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full animate-pulse" title="Open to Opportunities"></span>
-              <span className="absolute -bottom-2 -left-2 px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-600 text-white shadow-md border border-teal-400/40 flex items-center gap-1">
+              <span className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-teal-600 text-white shadow-md border border-teal-400/40 flex items-center gap-1 shrink-0 whitespace-nowrap">
                 <Sparkles className="w-2.5 h-2.5 text-amber-300" />
                 <span>Ask AI ✦</span>
               </span>
