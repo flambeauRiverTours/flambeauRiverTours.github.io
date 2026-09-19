@@ -9,15 +9,15 @@ interface SectionHeaderProps {
 }
 
 export const SectionHeader: React.FC<SectionHeaderProps> = ({ title, subtitle, icon: Icon, imageSrc }) => (
-  <div className="relative rounded-3xl overflow-hidden glass-panel h-40 sm:h-52 border border-purple-300/40 dark:border-purple-500/20 shadow-xl">
-    <img src={imageSrc} alt={title} className="w-full h-full object-cover opacity-85 dark:opacity-75 blur-[0.5px]" />
-    <div className="absolute inset-0 bg-gradient-to-t from-purple-950/85 via-purple-950/40 to-transparent backdrop-blur-[2px]" />
+  <div className="relative rounded-xl overflow-hidden glass-panel h-36 sm:h-48 border border-stone-200 dark:border-stone-800 shadow-sm">
+    <img src={imageSrc} alt={title} className="w-full h-full object-cover" />
+    <div className="absolute inset-0 bg-gradient-to-t from-stone-950/85 via-stone-950/40 to-transparent" />
     <div className="absolute bottom-6 left-6 right-6 space-y-1">
-      <h2 className="text-2xl sm:text-3xl font-serif text-purple-50 tracking-tight flex items-center gap-2.5">
-        <Icon className="w-6 h-6 text-purple-300 animate-pulse" />
+      <h2 className="text-2xl font-serif font-bold text-white tracking-tight flex items-center gap-2">
+        <Icon className="w-5 h-5 text-emerald-400" />
         <span>{title}</span>
       </h2>
-      {subtitle && <p className="text-xs sm:text-sm text-purple-200/90 font-light tracking-wide">{subtitle}</p>}
+      {subtitle && <p className="text-xs sm:text-sm text-stone-300 font-light leading-relaxed">{subtitle}</p>}
     </div>
   </div>
 );
