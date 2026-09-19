@@ -2,13 +2,12 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Mail, FileText, Code2, ShieldCheck, Terminal, Award, CheckCircle2, MapPin } from 'lucide-react';
 import { personalInfo, sectionHeaderImages } from '../../datamodel/portfolioData';
-import { SpecQueryAssistant } from '../UI/SpecQueryAssistant';
 
 interface AboutSectionProps {
   setActiveTab?: (tabId: string) => void;
 }
 
-export const AboutSection: React.FC<AboutSectionProps> = ({ setActiveTab }) => {
+export const AboutSection: React.FC<AboutSectionProps> = () => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -140,9 +139,6 @@ export const AboutSection: React.FC<AboutSectionProps> = ({ setActiveTab }) => {
           </div>
         ))}
       </div>
-
-      {/* Inline System Spec Query Assistant */}
-      {setActiveTab && <SpecQueryAssistant setActiveTab={setActiveTab} />}
     </motion.div>
   );
 };

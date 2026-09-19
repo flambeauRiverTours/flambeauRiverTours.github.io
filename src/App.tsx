@@ -6,6 +6,7 @@ import { Navbar } from './components/Navigation/Navbar';
 import { AboutSection } from './components/Sections/AboutSection';
 import { CareerSection } from './components/Sections/CareerSection';
 import { ProjectsSection } from './components/Sections/ProjectsSection';
+import { SearchHeroLander } from './components/UI/SearchHeroLander';
 
 const TABS = [
   { id: 'about', label: 'Executive Overview', icon: User },
@@ -18,7 +19,10 @@ export function App() {
 
   return (
     <div className="min-h-screen relative bg-stone-100/50 dark:bg-stone-950 text-stone-900 dark:text-stone-100 font-sans selection:bg-emerald-700 selection:text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 min-h-screen flex flex-col justify-between relative z-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 min-h-screen flex flex-col justify-between relative z-10 space-y-8">
+        {/* Search Engine Hero Lander (Primary Focus) */}
+        <SearchHeroLander setActiveTab={setActiveTab} />
+
         <div className="space-y-8">
           {/* Mobile Top Navbar */}
           <Navbar
@@ -39,7 +43,7 @@ export function App() {
             </div>
 
             {/* Main Content Body */}
-            <main className="lg:col-span-8 xl:col-span-9 min-h-[80vh]">
+            <main className="lg:col-span-8 xl:col-span-9 min-h-[70vh]">
               <AnimatePresence mode="wait">
                 {activeTab === 'about' && <AboutSection key="about" setActiveTab={setActiveTab} />}
                 {activeTab === 'career' && <CareerSection key="career" />}
