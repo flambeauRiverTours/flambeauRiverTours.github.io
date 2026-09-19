@@ -1,0 +1,19 @@
+{
+  "name": "portfolio-api",
+  "version": "1.0.0",
+  "main": "dist/chat/index.js",
+  "description": "Azure Functions API Proxy for Portfolio SLM AI Assistant",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "clean": "rimraf dist",
+    "start": "func start"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
