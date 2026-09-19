@@ -2,28 +2,28 @@
 
 @layer base {
   :root {
-    --bg-gradient-from: #fbf7f2;
-    --bg-gradient-to: #f4ece4;
-    --card-bg: rgba(255, 252, 248, 0.85);
-    --card-border: rgba(225, 212, 200, 0.85);
-    --card-shadow: 0 10px 28px -5px rgba(130, 110, 95, 0.08);
-    --text-primary: #332d29;
-    --text-secondary: #6e645e;
-    --accent: #d97706;
-    --accent-glow: rgba(217, 119, 6, 0.15);
+    --bg-gradient-from: #f3f7f4;
+    --bg-gradient-to: #e8f0eb;
+    --card-bg: rgba(248, 252, 249, 0.85);
+    --card-border: rgba(200, 220, 208, 0.85);
+    --card-shadow: 0 10px 28px -5px rgba(60, 90, 70, 0.06);
+    --text-primary: #1c2e24;
+    --text-secondary: #4a6355;
+    --accent: #15803d;
+    --accent-glow: rgba(21, 128, 61, 0.15);
   }
 
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg-gradient-from: #1a1715;
-      --bg-gradient-to: #24201d;
-      --card-bg: rgba(38, 33, 30, 0.85);
-      --card-border: rgba(255, 235, 220, 0.09);
+      --bg-gradient-from: #0f1c15;
+      --bg-gradient-to: #16261d;
+      --card-bg: rgba(23, 38, 29, 0.85);
+      --card-border: rgba(200, 240, 215, 0.08);
       --card-shadow: 0 10px 32px 0 rgba(0, 0, 0, 0.45);
-      --text-primary: #f8f4f0;
-      --text-secondary: #b8aea8;
-      --accent: #f59e0b;
-      --accent-glow: rgba(245, 158, 11, 0.15);
+      --text-primary: #f0f7f3;
+      --text-secondary: #a3c2b2;
+      --accent: #34d399;
+      --accent-glow: rgba(52, 211, 153, 0.15);
     }
   }
 
@@ -38,20 +38,21 @@
 
 .glass-panel {
   background: var(--card-bg);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 2px dashed #d97706;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--card-border);
   border-radius: 1.25rem;
-  box-shadow: 4px 4px 0px 0px rgba(217, 119, 6, 0.15);
+  box-shadow: var(--card-shadow);
 }
 
 .glass-panel-hover {
-  transition: all 0.2s ease-in-out;
+  transition: all 0.25s ease-in-out;
 }
 
 .glass-panel-hover:hover {
-  transform: rotate(-0.5deg) translateY(-3px);
-  box-shadow: 6px 6px 0px 0px rgba(217, 119, 6, 0.25);
+  transform: translateY(-2px);
+  border-color: rgba(34, 197, 94, 0.4);
+  box-shadow: 0 12px 32px -4px rgba(34, 197, 94, 0.12);
 }
 
 @media (prefers-color-scheme: dark) {
