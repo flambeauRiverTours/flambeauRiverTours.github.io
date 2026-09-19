@@ -9,8 +9,8 @@ export const ProjectsSection: React.FC = () => (
     initial={{ opacity: 0, y: 15 }}
     animate={{ opacity: 1, y: 0 }}
     exit={{ opacity: 0, y: -15 }}
-    transition={{ duration: 0.3 }}
-    className="space-y-6"
+    transition={{ duration: 0.4, ease: "easeOut" }}
+    className="space-y-8"
   >
     <SectionHeader
       title="Architectural & Engineering Case Studies"
@@ -21,49 +21,49 @@ export const ProjectsSection: React.FC = () => (
 
     <div className="space-y-6">
       {caseStudiesData.map((cs) => (
-        <div key={cs.id} className="glass-panel rounded-2xl p-6 sm:p-8 space-y-5 glass-panel-hover">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-200/50 dark:border-slate-800/50">
+        <div key={cs.id} className="glass-panel rounded-3xl p-6 sm:p-8 space-y-6 glass-panel-hover border border-purple-200/40 dark:border-purple-500/20">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-purple-200/30 dark:border-purple-900/30">
             <div>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-teal-500/10 dark:bg-teal-500/15 text-teal-700 dark:text-teal-300 border border-teal-500/20 mb-2">
-                <Layers className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-purple-500/10 text-purple-800 dark:text-purple-200 border border-purple-500/20 mb-2">
+                <Layers className="w-3.5 h-3.5 text-purple-500" />
                 <span>{cs.category}</span>
               </span>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">{cs.title}</h3>
-              <p className="text-xs font-semibold text-teal-600 dark:text-teal-400 mt-0.5">{cs.subtitle}</p>
+              <h3 className="text-2xl font-serif text-slate-900 dark:text-slate-100">{cs.title}</h3>
+              <p className="text-xs font-semibold text-purple-700 dark:text-purple-300 mt-1">{cs.subtitle}</p>
             </div>
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-200/50 dark:bg-slate-800/50 px-3 py-1.5 rounded-lg self-start sm:self-center">
+            <span className="text-xs font-medium text-purple-900/60 dark:text-purple-300/60 bg-purple-500/5 px-3 py-1.5 rounded-full border border-purple-200/30 self-start sm:self-center">
               {cs.period}
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Problem Statement</h4>
-              <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-purple-900/60 dark:text-purple-300/60">Problem Statement</h4>
+              <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-light">
                 {cs.problemStatement}
               </p>
             </div>
             <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Architecture & Solution</h4>
-              <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-purple-900/60 dark:text-purple-300/60">Architecture & Solution</h4>
+              <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-light">
                 {cs.architectureSolution}
               </p>
             </div>
           </div>
 
           <div className="pt-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Key Business & Technical Impact</h4>
-            <ul className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <h4 className="text-xs font-bold uppercase tracking-widest text-purple-900/60 dark:text-purple-300/60 mb-3">Key Business & Technical Impact</h4>
+            <ul className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {cs.impactMetrics.map((metric, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-300 bg-slate-100/60 dark:bg-slate-900/60 p-2.5 rounded-xl border border-slate-200/40 dark:border-slate-800/40">
-                  <CheckCircle className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0 mt-0.5" />
+                <li key={idx} className="flex items-start gap-2.5 text-xs text-slate-700 dark:text-slate-300 bg-purple-500/5 dark:bg-purple-900/20 p-3 rounded-2xl border border-purple-200/30 dark:border-purple-800/30 font-light">
+                  <CheckCircle className="w-3.5 h-3.5 text-purple-500 shrink-0 mt-0.5" />
                   <span>{metric}</span>
                 </li>
               ))}
             </ul>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-200/40 dark:border-slate-800/40">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-purple-200/30 dark:border-purple-900/30">
             <div className="flex flex-wrap gap-1.5">
               {cs.technologies.map((tech, idx) => (
                 <span key={idx} className="badge-tag">
@@ -78,7 +78,7 @@ export const ProjectsSection: React.FC = () => (
                   href={cs.githubUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 hover:text-purple-600 transition-colors"
                 >
                   <Code className="w-3.5 h-3.5" />
                   <span>Code</span>
@@ -89,7 +89,7 @@ export const ProjectsSection: React.FC = () => (
                   href={cs.prUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-purple-600 dark:text-purple-400 hover:underline"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-purple-600 dark:text-purple-400 hover:underline"
                 >
                   <GitPullRequest className="w-3.5 h-3.5" />
                   <span>View Pull Request</span>
@@ -100,7 +100,7 @@ export const ProjectsSection: React.FC = () => (
                   href={cs.liveUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-600 dark:text-teal-400 hover:underline"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-purple-600 dark:text-purple-400 hover:underline"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                   <span>Live Project</span>

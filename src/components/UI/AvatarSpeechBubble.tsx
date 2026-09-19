@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Send, ArrowRight, Bot } from 'lucide-react';
 import { QUICK_PROMPTS, queryAIAssistant, AIResponse } from '../../datamodel/aiContext';
 import { personalInfo } from '../../datamodel/portfolioData';
-import { streamAIChat } from '../../services/aiStreamService';
 
 interface AvatarSpeechBubbleProps {
   isOpen: boolean;
@@ -20,9 +19,7 @@ export const AvatarSpeechBubble: React.FC<AvatarSpeechBubbleProps> = ({
 }) => {
   const [query, setQuery] = useState('');
   const [currentResponse, setCurrentResponse] = useState<AIResponse | null>(null);
-  const [streamedText, setStreamedText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [isStreaming, setIsStreaming] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const bubbleRef = useRef<HTMLDivElement>(null);
 
@@ -47,7 +44,6 @@ export const AvatarSpeechBubble: React.FC<AvatarSpeechBubbleProps> = ({
     } else {
       setQuery('');
       setCurrentResponse(null);
-      setStreamedText('');
     }
   }, [isOpen, onClose]);
 
@@ -64,40 +60,16 @@ export const AvatarSpeechBubble: React.FC<AvatarSpeechBubbleProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  const handleAsk = async (userPrompt: string) => {
+  const handleAsk = (userPrompt: string) => {
     if (!userPrompt.trim()) return;
     setIsTyping(true);
-    setIsStreaming(true);
     setQuery(userPrompt);
-    setStreamedText('');
-    setCurrentResponse(null);
 
-    let accumulatedText = '';
-
-    await streamAIChat(
-      userPrompt,
-      (token) => {
-        setIsTyping(false);
-        accumulatedText += token;
-        setStreamedText(accumulatedText);
-      },
-      () => {
-        // Fallback to local context engine
-        const fallbackRes = queryAIAssistant(userPrompt);
-        setCurrentResponse(fallbackRes);
-        setIsTyping(false);
-        setIsStreaming(false);
-      }
-    );
-
-    if (accumulatedText) {
-      setCurrentResponse({
-        answer: accumulatedText,
-        sourceTab: 'about',
-        sourceTitle: 'Azure AI Phi-3 Stream'
-      });
-      setIsStreaming(false);
-    }
+    setTimeout(() => {
+      const res = queryAIAssistant(userPrompt);
+      setCurrentResponse(res);
+      setIsTyping(false);
+    }, 300);
   };
 
   if (!isOpen) return null;
@@ -111,8 +83,8 @@ export const AvatarSpeechBubble: React.FC<AvatarSpeechBubbleProps> = ({
         initial={{ opacity: 0, scale: 0.95, x: isSidebar ? -10 : 0, y: isSidebar ? 0 : -10 }}
         animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, x: isSidebar ? -10 : 0, y: isSidebar ? 0 : -10 }}
-        transition={{ type: 'spring', stiffness: 450, damping: 28 }}
-        className={`absolute z-50 text-left bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl p-4 shadow-2xl border-2 border-teal-500/40 dark:border-teal-400/40 ${
+        transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+        className={`absolute z-50 text-left bg-white/95 dark:bg-purple-950/95 backdrop-blur-xl rounded-3xl p-4 shadow-2xl border border-purple-300/50 dark:border-purple-500/30 ${
           isSidebar
             ? 'left-full top-0 ml-4 w-[19rem] sm:w-[22rem] lg:w-[24rem]'
             : 'top-full left-0 mt-3 w-[calc(100vw-2rem)] max-w-sm'
@@ -124,40 +96,40 @@ export const AvatarSpeechBubble: React.FC<AvatarSpeechBubbleProps> = ({
         {/* Pointer Arrow pointing LEFT directly at the sidebar portrait face */}
         {isSidebar && (
           <>
-            <div className="absolute -left-3 top-8 w-0 h-0 border-t-8 border-t-transparent border-b-8 border-b-transparent border-r-8 border-r-teal-500/40" />
-            <div className="absolute -left-[10px] top-[33px] w-0 h-0 border-t-[7px] border-t-transparent border-b-[7px] border-b-transparent border-r-[7px] border-r-white dark:border-r-slate-900" />
+            <div className="absolute -left-3 top-8 w-0 h-0 border-t-8 border-t-transparent border-b-8 border-b-transparent border-r-8 border-r-purple-300/50 dark:border-r-purple-500/30" />
+            <div className="absolute -left-[10px] top-[33px] w-0 h-0 border-t-[7px] border-t-transparent border-b-[7px] border-b-transparent border-r-[7px] border-r-white dark:border-r-purple-950" />
           </>
         )}
 
         {/* Pointer Arrow pointing UP directly at the navbar avatar photo */}
         {!isSidebar && (
           <>
-            <div className="absolute -top-3 left-5 w-0 h-0 border-l-8 border-l-transparent border-r-8 border-r-transparent border-b-8 border-b-teal-500/40" />
-            <div className="absolute -top-[10px] left-[21px] w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-b-[7px] border-b-white dark:border-b-slate-900" />
+            <div className="absolute -top-3 left-5 w-0 h-0 border-l-8 border-l-transparent border-r-8 border-r-transparent border-b-8 border-b-purple-300/50 dark:border-b-purple-500/30" />
+            <div className="absolute -top-[10px] left-[21px] w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-b-[7px] border-b-white dark:border-b-purple-950" />
           </>
         )}
 
         {/* 1. Compact Header */}
-        <div className="flex items-center justify-between pb-2 border-b border-slate-200/80 dark:border-slate-800">
+        <div className="flex items-center justify-between pb-2 border-b border-purple-200/40 dark:border-purple-800/40">
           <div className="flex items-center gap-2">
             <div className="relative">
               <img
                 src={personalInfo.avatarUrl}
                 alt={personalInfo.name}
-                className="w-6 h-6 rounded-full object-cover border border-teal-500 shadow-sm"
+                className="w-6 h-6 rounded-full object-cover border border-purple-400 shadow-sm"
               />
-              <span className="absolute -bottom-1 -right-1 p-0.5 rounded-full bg-teal-500 text-white text-[8px]">
+              <span className="absolute -bottom-1 -right-1 p-0.5 rounded-full bg-purple-500 text-white text-[8px]">
                 <Sparkles className="w-2 h-2" />
               </span>
             </div>
-            <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1">
+            <h3 className="text-xs font-serif font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1">
               <span>Jack's AI Assistant</span>
             </h3>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors cursor-pointer"
+            className="p-1 rounded-full hover:bg-purple-500/10 dark:hover:bg-purple-400/10 text-slate-500 dark:text-slate-400 transition-colors cursor-pointer"
             aria-label="Close Speech Bubble"
           >
             <X className="w-3.5 h-3.5" />
@@ -179,13 +151,13 @@ export const AvatarSpeechBubble: React.FC<AvatarSpeechBubbleProps> = ({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Ask about Jack's scale..."
             aria-label="Ask AI Assistant a question"
-            className="flex-1 px-2.5 py-1.5 rounded-lg bg-slate-100/90 dark:bg-slate-800/90 text-slate-900 dark:text-slate-100 text-[11px] font-medium placeholder-slate-400 border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-teal-500"
+            className="flex-1 px-3 py-1.5 rounded-full bg-purple-50/50 dark:bg-purple-900/30 text-slate-900 dark:text-slate-100 text-[11px] font-medium placeholder-purple-400/70 border border-purple-200/50 dark:border-purple-800/50 focus:outline-none focus:border-purple-400"
           />
           <button
             type="submit"
-            disabled={!query.trim() || isTyping || isStreaming}
+            disabled={!query.trim() || isTyping}
             aria-label="Send Query"
-            className="px-2.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 disabled:opacity-50 text-white font-semibold text-[11px] transition-all flex items-center gap-1 shadow-sm cursor-pointer"
+            className="px-3 py-1.5 rounded-full bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-medium text-[11px] transition-all flex items-center gap-1 shadow-md shadow-purple-500/20 cursor-pointer"
           >
             <span>Ask</span>
             <Send className="w-3 h-3" />
@@ -194,13 +166,13 @@ export const AvatarSpeechBubble: React.FC<AvatarSpeechBubbleProps> = ({
 
         {/* 3. Fully-responsive rounded Prompt Chips */}
         <div className="pt-2 space-y-1">
-          <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">Quick prompts:</p>
+          <p className="text-[10px] font-medium text-purple-900/50 dark:text-purple-300/50">Quick prompts:</p>
           <div className="flex flex-col gap-1">
             {QUICK_PROMPTS.map((prompt, idx) => (
               <button
                 key={idx}
                 onClick={() => handleAsk(prompt)}
-                className="text-left px-2.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-medium bg-slate-100 dark:bg-slate-800 hover:bg-teal-500/15 hover:text-teal-700 dark:hover:text-teal-300 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700 transition-all cursor-pointer leading-snug break-words"
+                className="text-left px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-medium bg-purple-50/60 dark:bg-purple-900/20 hover:bg-purple-500/15 hover:text-purple-800 dark:hover:text-purple-200 text-slate-700 dark:text-slate-300 border border-purple-200/40 dark:border-purple-800/30 transition-all cursor-pointer leading-snug break-words"
               >
                 {prompt}
               </button>
@@ -211,24 +183,24 @@ export const AvatarSpeechBubble: React.FC<AvatarSpeechBubbleProps> = ({
         {/* 4. Output Answer Area */}
         <div className="pt-2">
           {isTyping && (
-            <div className="flex items-center gap-2 text-[11px] font-semibold text-teal-600 dark:text-teal-400 py-1">
+            <div className="flex items-center gap-2 text-[11px] font-medium text-purple-600 dark:text-purple-400 py-1">
               <Bot className="w-3.5 h-3.5 animate-spin" />
               <span>Searching Jack's details...</span>
             </div>
           )}
 
-          {(streamedText || currentResponse) && (
+          {!isTyping && currentResponse && (
             <motion.div
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-2 p-2.5 rounded-xl bg-teal-500/10 dark:bg-teal-500/15 border border-teal-500/20 text-slate-800 dark:text-slate-200 text-[11px] sm:text-xs leading-relaxed"
+              className="space-y-2 p-3 rounded-2xl bg-purple-500/10 dark:bg-purple-400/15 border border-purple-500/20 text-slate-800 dark:text-slate-200 text-xs leading-relaxed font-light"
             >
-              <p>{streamedText || currentResponse?.answer}</p>
+              <p>{currentResponse.answer}</p>
 
-              {currentResponse?.sourceTab && (
-                <div className="pt-1.5 flex items-center justify-between border-t border-teal-500/20 text-[10px]">
-                  <span className="text-slate-500 dark:text-slate-400 font-medium truncate max-w-[12rem]">
-                    Source: <strong className="text-teal-700 dark:text-teal-300">{currentResponse.sourceTitle}</strong>
+              {currentResponse.sourceTab && (
+                <div className="pt-1.5 flex items-center justify-between border-t border-purple-500/20 text-[10px]">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">
+                    Source: <strong className="text-purple-700 dark:text-purple-300 font-serif">{currentResponse.sourceTitle}</strong>
                   </span>
                   <button
                     onClick={() => {
@@ -237,7 +209,7 @@ export const AvatarSpeechBubble: React.FC<AvatarSpeechBubbleProps> = ({
                         onClose();
                       }
                     }}
-                    className="inline-flex items-center gap-1 font-bold text-teal-700 dark:text-teal-300 hover:underline cursor-pointer shrink-0"
+                    className="inline-flex items-center gap-1 font-semibold text-purple-700 dark:text-purple-300 hover:underline cursor-pointer"
                   >
                     <span>Jump</span>
                     <ArrowRight className="w-2.5 h-2.5" />
