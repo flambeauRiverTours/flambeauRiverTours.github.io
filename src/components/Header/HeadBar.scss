@@ -1,3 +1,21 @@
-.nameTitle{
-    text-align: center !important;
+.headerBar{
+    background-color: rgba(255, 255, 255, 0.95);
+    border-bottom: 1px solid var(--bs-border-color);
+    backdrop-filter: blur(6px);
+}
+
+.headerBrand{
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+
+    .name{
+        font-weight: 600;
+        font-size: 1.05rem;
+    }
+
+    .role{
+        font-size: 0.8rem;
+        color: var(--bs-secondary-color);
+    }
 }

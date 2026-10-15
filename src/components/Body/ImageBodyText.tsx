@@ -4,25 +4,24 @@
 
 import { IBodyTextSection } from "../../datamodel/SectionData";
 import Image from 'react-bootstrap/Image';
-import Container from 'react-bootstrap/Container';
+import { renderBody, renderLinks } from "./BodyContent";
 
 function ImageBodyText(props: IImageBodyTextProps) {
-  
-    return (<>
-        <Container fluid  style={{paddingTop: '3rem', textAlign: 'center'}}>
-          <Image src={props.bodyTextSection.imagePath} style={{height: '20rem'}} rounded fluid />
-        </Container>
-        <Container fluid>
-            <h4>{props.bodyTextSection.title}</h4>
-            <p>{props.bodyTextSection.body}</p>
-        </Container>
-        </>
+
+    return (
+        <div className="entry">
+            <h3>{props.bodyTextSection.title}</h3>
+            {props.bodyTextSection.subtitle ? <p className="entryMeta">{props.bodyTextSection.subtitle}</p> : null}
+            {props.bodyTextSection.imagePath ?
+                <Image src={props.bodyTextSection.imagePath} alt={props.bodyTextSection.imageAlt ?? props.bodyTextSection.title} className="entryImage" loading="lazy" rounded fluid /> : null}
+            {renderBody(props.bodyTextSection.body)}
+            {renderLinks(props.bodyTextSection.links)}
+        </div>
     );
 }
 
 export interface IImageBodyTextProps {
     bodyTextSection: IBodyTextSection,
-    index: number;
 }
 
 export default ImageBodyText;

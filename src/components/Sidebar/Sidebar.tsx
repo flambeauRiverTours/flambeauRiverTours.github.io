@@ -1,41 +1,47 @@
 /**
- * Sidebar for the site. Buttons update the content in the body of the site
+ * Sidebar for the site, with links that jump to the matching section of the page via #anchors
  */
-import Container from "react-bootstrap/Container";
 import Stack from "react-bootstrap/Stack";
-import Button from "react-bootstrap/Button";
-import { useState } from "react";
+import React from "react";
 import "./Siderbar.scss"
 import LinkIconsItem from "./LinkIconsItem";
+import { ISectionData, SectionGroup } from "../../datamodel/SectionData";
 
-function Sidebar(props: ISideBarInitializationProps){
-    const [activeIndex, setActiveIndex] = useState(props.activeIndex);
+function Sidebar(props: ISideBarInitializationProps) {
     return (
-        <Container fluid className="sticky top-0 bg-secondary sidebar" >
-            <Stack gap={3} className="sticky top-0 flex flex-col " >
+        <nav className="sidebar" aria-label="Site sections">
+            <Stack gap={3}>
                 {props.hideName ? null :
-                <Container className="text-light font-weight-bold text-lg-center nameItem" fluid>
-                    Jack Treadwell
-                </Container>}
-                <LinkIconsItem/>
-                <div className="dividerBar"/>
-                {props.buttonTitles.map((buttonTitle: string, index: number) =>{
-                    const buttonClick = () => {
-                        if (index === activeIndex) {return;}
-                        props.buttonSelectionCallback(index); //tells App.tsx to change the active body block
-                        setActiveIndex(index);
-                    }
-                    return <Button id={"Sidebar Button " + index} active={activeIndex === index} onClick={buttonClick} variant="secondary">{buttonTitle}</Button>
-                })}
+                    <div className="nameItem">
+                        <div className="name">Jack Treadwell</div>
+                        <div className="role">Senior Software Engineer</div>
+                    </div>}
+                <LinkIconsItem />
+                <div className="dividerBar" />
+                <Stack gap={1}>
+                    {props.sections.map((section: ISectionData, index: number) => {
+                        //label the start of the personal sections so they read as secondary to the professional ones
+                        const startsPersonalGroup = section.group === SectionGroup.personal && props.sections[index - 1]?.group !== SectionGroup.personal;
+                        return <React.Fragment key={section.id}>
+                            {startsPersonalGroup ? <div className="navGroupLabel">Beyond work</div> : null}
+                            <a
+                                href={"#" + section.id}
+                                className={"navButton" + (props.activeId === section.id ? " active" : "")}
+                                aria-current={props.activeId === section.id ? "location" : undefined}
+                                onClick={props.onNavigate ? (event) => props.onNavigate!(section.id, event) : undefined}
+                            >{section.buttonTitle}</a>
+                        </React.Fragment>
+                    })}
+                </Stack>
             </Stack>
-        </Container>);
+        </nav>);
 }
 
-interface ISideBarInitializationProps{
-    buttonTitles: string[]; //List of button titles to show in the sidebar
-    buttonSelectionCallback: (index: number) => void; //Callback to invoke when a button is selected
+interface ISideBarInitializationProps {
+    sections: ISectionData[]; //Sections of the page to link to
+    activeId: string; //id of the section currently in view
     hideName?: boolean;
-    activeIndex: number;
+    onNavigate?: (id: string, event: React.MouseEvent) => void; //Optional hook to intercept link clicks (e.g. to close the mobile menu first)
 }
 
 export default Sidebar;
