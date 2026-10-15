@@ -1,59 +1,213 @@
+// Theme overrides, applied before Bootstrap is imported
+$secondary: #1e293b;
+$body-color: #1f2937;
+$link-color: #1d4ed8;
+$font-family-sans-serif: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+$headings-font-weight: 600;
+
 @import 'bootstrap/scss/bootstrap';
+
+$header-bar-height: 4rem;
+
 #root {
   margin: 0;
-  overflow-x: hidden;
-}
-::-webkit-scrollbar {
-  width: 12px;
+  overflow-x: clip; // unlike hidden, clip doesn't create a scroll container, so the sticky sidebar stays pinned to the window
 }
 
-::-webkit-scrollbar-track {
-  background-color: rgb(108, 117, 125);
-  border-left: 6px;
-  border-color: black;
-}
-
-::-webkit-scrollbar-thumb {
-  border-radius: 10px;
-  background-color:#fff;
-  -webkit-box-shadow: inset 0 0 6px rgba(90,90,90,0.7);
-}
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
+// Smooth scrolling for #links, only for visitors who haven't asked for reduced motion
+@media (prefers-reduced-motion: no-preference){
+  html{
+    scroll-behavior: smooth;
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }
 
-.card {
-  padding: 2em;
+.sidebarColumn{
+  min-width: 200px;
+  max-width: 260px;
 }
 
-.read-the-docs {
-  color: #888;
+// Leave room for the fixed header bar on narrow screens
+.withHeaderBar{
+  padding-top: $header-bar-height;
+
+  .pageSection{
+    scroll-margin-top: $header-bar-height + 1rem;
+  }
 }
 
-.sideBarColumn{
-  min-width: 140px;
+// Centred reading column for the main content
+.content{
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 0;
+  line-height: 1.65;
+
+  h2{
+    font-size: 1.75rem;
+    letter-spacing: -0.02em;
+  }
+
+  h3{
+    font-size: 1.15rem;
+    margin-bottom: 0.25rem;
+  }
+
+  ul{
+    padding-left: 1.25rem;
+  }
+
+  li{
+    margin-bottom: 0.4rem;
+  }
+}
+
+.hero{
+  text-align: center;
+  padding-bottom: 1rem;
+
+  h1{
+    font-size: 2.5rem;
+    letter-spacing: -0.03em;
+    margin: 1.25rem 0 0.25rem;
+  }
+
+  .heroRole{
+    font-size: 1.15rem;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+  }
+
+  .heroLocation{
+    color: $gray-600;
+    margin-bottom: 1.25rem;
+  }
+}
+
+.heroPortrait{
+  width: 9rem;
+  height: 9rem;
+  object-fit: cover;
+}
+
+.content ul.highlights{
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  list-style: none;
+  padding: 0;
+  margin: 2rem 0 0;
+  text-align: left;
+
+  li{
+    margin: 0;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+    background-color: $gray-100;
+  }
+
+  .highlightValue{
+    display: block;
+    font-size: 1.3rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: $secondary;
+  }
+
+  .highlightLabel{
+    display: block;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: $gray-600;
+  }
+
+  @media (max-width: 768px){
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.pageSection{
+  padding-top: 3.5rem;
+  scroll-margin-top: 1rem;
+}
+
+.sectionTitle{
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--bs-border-color);
+}
+
+.groupDivider{
+  margin: 5rem 0 -1.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: $gray-500;
+}
+
+.entry{
+  padding-top: 2rem;
+}
+
+.entryMeta{
+  font-size: 0.9rem;
+  color: $gray-600;
+  margin-bottom: 0.75rem;
+}
+
+.entryLinks{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  font-weight: 500;
+
+  a{
+    text-decoration: none;
+
+    &:hover{
+      text-decoration: underline;
+    }
+  }
+}
+
+.entryImage{
+  display: block;
+  width: 100%;
+  max-height: 22rem;
+  object-fit: cover;
+  object-position: top;
+  margin: 0.5rem 0 1rem;
+  border: 1px solid var(--bs-border-color);
+}
+
+.skillList{
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4rem 1.5rem;
+
+  dt{
+    font-weight: 600;
+  }
+
+  dd{
+    margin: 0;
+  }
+
+  @media (max-width: 576px){
+    grid-template-columns: 1fr;
+    gap: 0;
+
+    dd{
+      margin-bottom: 0.5rem;
+    }
+  }
 }
