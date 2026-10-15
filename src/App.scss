@@ -179,12 +179,13 @@ $header-bar-height: 4rem;
   }
 }
 
+// Show the whole photo at its own aspect ratio, never cropped; the height cap keeps square photos from filling the screen
 .entryImage{
   display: block;
-  width: 100%;
-  max-height: 22rem;
-  object-fit: cover;
-  object-position: top;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 28rem;
   margin: 0.5rem 0 1rem;
   border: 1px solid var(--bs-border-color);
 }
