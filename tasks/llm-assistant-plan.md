@@ -36,6 +36,7 @@ Browser (GitHub Pages, jacktreadwell.com)
          1. CORS: only https://jacktreadwell.com (+ localhost in dev)
          2. Validate: question ≤ 500 chars, history ≤ 4 turns
          3. Rate limit: per hashed IP (e.g. 5/min, 30/day) + global daily cap (e.g. 300/day), counters in Table Storage
+            IP hash = HMAC(daily key, ip), daily key = HMAC(secret, UTC date); counter rows deleted after a day
          4. Model call through IAnswerModel → Foundry deployment (Phi-4-mini to start)
             system = rules + knowledge file (with link IDs), temperature ~0.2, max_tokens ~400
          5. Check the link IDs the model cited against the known list; drop any that don't exist
@@ -81,14 +82,21 @@ The whole selection process costs roughly **$1–2** in model fees. Large models
 
 **Worst case.** If bots hit the global cap (300 questions a day) every day, that's about 45M input tokens a month: ≈ $5 on Phi-4-mini, ≈ $23 on a mid-size model. If a mid-size model is chosen, lower the global cap to about 100 a day (worst case ≈ $8) and keep the budget alert.
 
-**Launch bar (agreed):** 100% of trap questions answered correctly (no invented facts) and ≥ 90% overall. If no model clearly does better than the hand-written FAQ on the eval set, ship the FAQ as a plain page section instead.
+**Launch bar (agreed):** 100% of trap, privacy, jailbreak and sensitive cases pass (no invented facts, no private details, no broken rules, no political stances or unprofessional replies) and ≥ 90% of all cases pass. If no model clearly does better than the hand-written FAQ on the eval set, ship the FAQ as a plain page section instead.
 
 **Logging (agreed: questions and answers).** Logs show what recruiters actually ask and catch wrong answers the evals missed.
-- **What:** timestamp, question, answer, links, model/deployment, latency, token counts, and whether a limit was hit. No raw IP: only the salted hash used for rate limiting, and not even that if it isn't needed for review.
+- **What:** timestamp, question, answer, links, model/deployment, latency, token counts, and whether a limit was hit. Nothing derived from the IP address: abuse shows up in the rate-limit counters, which are deleted after a day.
 - **Where:** one JSON-lines blob per day in a private container in the Function's storage account, in the same US region as the Function and Foundry resource. EU storage isn't needed: storage location isn't what GDPR requires (transfers to Microsoft in the US are allowed), and the site targets US employers.
 - **Retention:** a Blob lifecycle rule in Bicep deletes logs after 90 days automatically, with no cleanup code.
 - **Review:** a weekly skim, plus adding any bad answers as new eval questions.
 - **Disclosure:** a line in the drawer ("Questions and answers are stored for 90 days to improve this assistant. Don't include personal information.") and a short privacy note linked from it, naming Microsoft Foundry as the processor.
+
+**IP addresses (rate limiting only).**
+- IP addresses are never stored. The rate limiter keys its counters on `HMAC(dailyKey, ip)`, where `dailyKey = HMAC(secret, UTC date)` and the secret exists only in the Function's settings.
+- The same visitor gets a different hash each day, so hashes can't be linked across days.
+- The date alone is not used as the salt: it isn't secret, and the ~4.3B IPv4 addresses can be brute-forced in minutes.
+- A daily timer deletes counter rows older than yesterday, so IP-derived data lives at most about 48 hours.
+- This is pseudonymous, not anonymous, while the secret exists, so the privacy note doesn't use the word "anonymous".
 
 ## 3. UI placement
 
@@ -112,10 +120,10 @@ Principle: the site works for a recruiter who never touches the assistant. The a
 |---|---|---|
 | 0. Knowledge + evals (do first) | Entry anchors on the site; `build:knowledge` script with IDs and `links.json`; `faq.md`; ~30 eval questions with expected facts and expected links, including traps ("Is Jack Kubernetes-certified?" → no) and jailbreak attempts. Small runner that sends them to any Foundry deployment and reports pass/fail. First run against Phi-4-mini | 1 day |
 | 1. Backend | C# Function `/api/ask` with `IAnswerModel` + Foundry implementation, link parsing and checking, managed identity with the Foundry User role, Bicep copied from FantasyFootball (Flex Consumption, storage, CORS, budget), OIDC deploy job | 1 day |
-| 2. Guardrails + logging | Hashed-IP + global daily limits in Table Storage, input caps, deployment capacity set to ~20k tokens/minute, Foundry content filters checked and on, budget alert, blob logging with the 90-day lifecycle rule | 0.75 day |
+| 2. Guardrails + logging | Hashed-IP (daily key) + global daily limits in Table Storage, daily cleanup of counter rows, input caps, deployment capacity set to ~20k tokens/minute, Foundry content filters checked and on, budget alert, blob logging with the 90-day lifecycle rule | 1 day |
 | 3. UI | Drawer, entry points, link buttons, loading/error states, logging notice, keyboard/screen-reader checks, phone layout | 1 day |
 | 4. Tune + launch | Tune the prompt against the evals. If Phi-4-mini still fails traps, deploy and evaluate one or two mid-size models (≤ $3/month). Privacy note, turn off key auth on the Foundry resource, soft launch | 0.5–1 day |
-| **Total** | | **≈ 4.25–4.75 days (30–38 h)** |
+| **Total** | | **≈ 4.5–5 days (32–40 h)** |
 | Optional | Streaming answers (needs streaming set up on the Function plus a client stream reader) | +0.5 day |
 
 The existing Foundry setup saves some backend work. Entry anchors, link checking and logging add about half a day. Phi-4-mini will likely need more prompt tuning than a larger model, and possibly a second model to evaluate. Running costs: the model (under $1 a month for Phi-4-mini at this volume, at most $3 for a mid-size model), plus Functions and Storage, likely within free allowances. The Jules estimate of 14–21 hours skipped rate limiting, evals, logging and the knowledge pipeline.
@@ -128,7 +136,7 @@ The existing Foundry setup saves some backend work. Entry anchors, link checking
 | **Wrong or broken links** | Medium / low | Only IDs that exist in `links.json` are returned; expected links in the evals; CI fails if an anchor in `links.json` doesn't exist on the page |
 | **Cost from bots or abuse** | Medium / low–medium | Global daily cap (hard stop), per-IP limits, `max_tokens`, input length cap, deployment tokens-per-minute as a hard ceiling. Azure budget alerts only notify, they don't stop spending |
 | **Prompt injection or embarrassing output** that gets screenshotted | Medium / medium (small models are easier to jailbreak) | No tools and no secrets in the prompt, so the worst case is words. Foundry content filters on (the test response showed no filter results, so confirm in Phase 2 which filter applies to this deployment), topic restriction, jailbreak cases in evals |
-| **Privacy** (GDPR may apply while you live in Berlin, until January 2027; US state privacy laws are unlikely to apply to a personal site this size) | Low / low–medium. You're storing questions people type, and GlobalStandard may process prompts in any Azure region | Everything stays in US regions. Keep the cheap habits: 90-day automatic deletion, no raw IPs, notice in the drawer and a short privacy note naming Microsoft as processor, "don't include personal information". These cover the GDPR basics while you're in Berlin and are good practice afterwards |
+| **Privacy** (GDPR may apply while you live in Berlin, until January 2027; US state privacy laws are unlikely to apply to a personal site this size) | Low / low–medium. You're storing questions people type, and GlobalStandard may process prompts in any Azure region | Everything stays in US regions. Keep the cheap habits: 90-day automatic deletion, no IPs or IP hashes in the logs, rate-limit hashes rotated daily and deleted after a day, notice in the drawer and a short privacy note naming Microsoft as processor, "don't include personal information". These cover the GDPR basics while you're in Berlin and are good practice afterwards |
 | **Content drift** (site updated, assistant still answers from the old version) | High without automation / medium | Knowledge file and link list generated from site content, plus a CI staleness check |
 | **Cold starts** (Flex Consumption, a few seconds) | High / low | "Thinking…" state. Avoid always-ready instances, which cost money |
 | **Nobody uses it** | Medium / low | The logs show usage directly. If nobody uses it after about 3 months, remove it. It still works as a portfolio project with a write-up, like Fantasy Football |
@@ -140,7 +148,7 @@ The existing Foundry setup saves some backend work. Entry anchors, link checking
 1. Platform: Microsoft Foundry, starting with Phi-4-mini (GlobalStandard)
 2. Auth: Entra ID / managed identity (confirmed working); turn off key auth before launch
 3. Log question and answer text, 90-day retention, with a notice in the drawer
-4. Launch bar: 100% of trap questions, ≥ 90% overall
+4. Launch bar: 100% of trap, privacy, jailbreak and sensitive cases, ≥ 90% overall
 5. Answers link to the relevant sections and entries of the site
 6. Plain request/response in v1, no streaming. Revisit if logged response times are regularly above ~3 s
 7. Deployment capacity: confirmed at 1 (1 request and 1,000 tokens a minute); raise to 20 (task 0.1 in `tasks/todo.md`)

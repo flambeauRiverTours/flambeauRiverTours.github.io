@@ -42,11 +42,11 @@ Epic Systems · Madison, WI · Jun 2018 – Mar 2021
 Languages: C#, TypeScript, JavaScript, SQL, M (MUMPS)
 .NET & Frontend: .NET 10, WPF, MVVM, React, HTML/CSS
 Testing: xUnit, Moq, unit & integration testing, TDD
-CI/CD & DevOps: GitLab CI/CD, GitHub Actions, Azure DevOps, Git, SonarQube, OSV-Scanner, SBOM (CycloneDX)
+CI/CD & DevOps: GitLab CI/CD, GitHub Actions, Git, SonarQube, OSV-Scanner, SBOM (CycloneDX)
 Cloud: Azure (Functions, Static Web Apps, SQL, Blob Storage), Bicep
 
 ## [experience-certifications] Certifications & Education
-- Microsoft Certified: AZ-400, Designing and Implementing Microsoft DevOps Solutions (2026)
+- Passed Microsoft exam AZ-400: Designing and Implementing Microsoft DevOps Solutions (2026)
 - Professional Scrum Master I, Scrum.org
 - BS in Physics and Computer Science, cum laude, Wake Forest University (2018)
 

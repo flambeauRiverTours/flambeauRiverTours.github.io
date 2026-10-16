@@ -160,7 +160,7 @@ export class FullPageData {
                 <dt>Languages</dt><dd>C#, TypeScript, JavaScript, SQL, M (MUMPS)</dd>
                 <dt>.NET &amp; Frontend</dt><dd>.NET 10, WPF, MVVM, React, HTML/CSS</dd>
                 <dt>Testing</dt><dd>xUnit, Moq, unit &amp; integration testing, TDD</dd>
-                <dt>CI/CD &amp; DevOps</dt><dd>GitLab CI/CD, GitHub Actions, Azure DevOps, Git, SonarQube, OSV-Scanner, SBOM (CycloneDX)</dd>
+                <dt>CI/CD &amp; DevOps</dt><dd>GitLab CI/CD, GitHub Actions, Git, SonarQube, OSV-Scanner, SBOM (CycloneDX)</dd>
                 <dt>Cloud</dt><dd>Azure (Functions, Static Web Apps, SQL, Blob Storage), Bicep</dd>
             </dl>,
             style: BodyBlockStyle.contentBlock,
@@ -169,7 +169,7 @@ export class FullPageData {
             id: "experience-certifications",
             title: "Certifications & Education",
             body: bulletList([
-                "Microsoft Certified: AZ-400, Designing and Implementing Microsoft DevOps Solutions (2026)",
+                "Passed Microsoft exam AZ-400: Designing and Implementing Microsoft DevOps Solutions (2026)",
                 "Professional Scrum Master I, Scrum.org",
                 "BS in Physics and Computer Science, cum laude, Wake Forest University (2018)",
             ]),
