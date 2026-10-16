@@ -1,0 +1,50 @@
+[
+  {
+    "id": "about",
+    "label": "About"
+  },
+  {
+    "id": "experience",
+    "label": "Experience"
+  },
+  {
+    "id": "experience-spie",
+    "label": "Experience › Senior Software Engineer"
+  },
+  {
+    "id": "experience-epic-lead",
+    "label": "Experience › Software Developer Team Lead"
+  },
+  {
+    "id": "experience-epic-developer",
+    "label": "Experience › Software Developer"
+  },
+  {
+    "id": "experience-skills",
+    "label": "Experience › Skills"
+  },
+  {
+    "id": "experience-certifications",
+    "label": "Experience › Certifications & Education"
+  },
+  {
+    "id": "projects",
+    "label": "Projects"
+  },
+  {
+    "id": "projects-fantasy-football",
+    "label": "Projects › Real-Time Fantasy Football Scoreboard"
+  },
+  {
+    "id": "projects-tidbyt",
+    "label": "Projects › Tidbyt Berlin Transit App"
+  },
+  {
+    "id": "reading",
+    "label": "Reading"
+  },
+  {
+    "id": "travel",
+    "label": "Travel"
+  }
+]

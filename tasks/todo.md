@@ -44,25 +44,13 @@ scripts/
 
 ## Phase 0: knowledge, anchors and evals (≈ 1 day)
 
-- [ ] **0.1 Raise the deployment's capacity** (You, or me with your OK). Capacity 1 allows 1 request a minute, which makes the evals impossible. Set it to 20 (20 requests/min, 20k tokens/min) in the Foundry portal (deployment → Edit → tokens per minute) or with `az cognitiveservices account deployment create` using the same deployment name and `--sku-capacity 20`. This stays the hard ceiling on spend.
-- [ ] **0.2 Entry anchors on the page**
-  - `SectionData.ts`: add `id?: string; //anchor id for linking to this entry` to `IBodyTextSection`.
-  - `BodyBlock.tsx`: render `id={value.id}` on the `contentBlock` and `imageBlock` wrappers.
-  - `App.scss`: `.entry` gets `scroll-margin-top: 1rem`, and `.withHeaderBar .entry` gets `$header-bar-height + 1rem`, matching `.pageSection`.
-  - `FullPageData.tsx` IDs: `experience-spie`, `experience-epic-lead`, `experience-epic-developer`, `experience-skills`, `experience-certifications`, `projects-fantasy-football`, `projects-tidbyt`. Reading and Travel link at section level only.
-  - The initial-hash scroll in `App.tsx` already uses `getElementById`, so `/#experience-epic-lead` should work on first load with no change. Check it in the browser.
-- [ ] **0.3 Move hero facts into the data model.** `Hero.tsx` hard-codes the role and location ("Relocating to Charlotte, NC in January 2027"), so the assistant wouldn't know them. Add `getProfile(): IProfile` (`name`, `role`, `location`) to `FullPageData` and use it in `Hero.tsx`.
-- [ ] **0.4 `npm run build:knowledge`**
-  - Add dev dependency `vite-node` (runs TS/TSX through Vite, so the image imports in `FullPageData.tsx` resolve). Script: `"build:knowledge": "vite-node scripts/build-knowledge.tsx"`.
-  - The script walks `new FullPageData()`: profile, highlights, then each section and entry. JSX bodies go through `renderToStaticMarkup` (`react-dom/server`) and a small HTML-to-text step: `<li>` → `- `, `<a>` keeps its text, other tags stripped, entities decoded. Image blocks contribute their `imageAlt`.
-  - Writes `api/knowledge/site.md`, with each heading tagged by its link ID:
-    ```
-    # [experience] Experience
-    ## [experience-epic-lead] Software Developer Team Lead (Epic Systems · Madison, WI · Mar 2021 – May 2024)
-    - Led and managed 9 developers …
-    ```
-  - Writes `api/knowledge/links.json`: `[{ "id": "experience-epic-lead", "label": "Experience › Epic Systems, Team Lead" }, …]`. Sections plus entries that have an `id`.
-  - Output is deterministic (stable order, `\n` line endings, trailing newline), so CI can diff it.
+- [x] **0.1 Raise the deployment's capacity** (You, or me with your OK). Capacity 1 allows 1 request a minute, which makes the evals impossible. Set it to 20 (20 requests/min, 20k tokens/min) in the Foundry portal (deployment → Edit → tokens per minute) or with `az cognitiveservices account deployment create` using the same deployment name and `--sku-capacity 20`. This stays the hard ceiling on spend.
+- [x] **0.2 Entry anchors on the page.** Optional `id` on `IBodyTextSection`, rendered by `BodyBlock` and `ImageBodyText`. IDs: `experience-spie`, `experience-epic-lead`, `experience-epic-developer`, `experience-skills`, `experience-certifications`, `projects-fantasy-football`, `projects-tidbyt` (Reading and Travel link at section level). On phones, entries scroll to just below the header bar. Checked in the browser: `/#experience-epic-lead` at phone width and `/#projects-tidbyt` at desktop width both land on the heading on first load
+- [x] **0.3 Hero facts in the data model.** `FullPageData.getProfile()` (`IProfile`: name, role, location), used by `Hero.tsx`
+- [x] **0.4 `npm run build:knowledge`** writes `api/knowledge/site.md` (~10k chars, ~2.5k tokens) and `links.json` (12 targets)
+  - `scripts/knowledge.tsx`: pure functions (`htmlToText`, `bodyToText`, `buildKnowledge`), covered by 17 Vitest tests in `scripts/knowledge.test.tsx` (`npm test`), including checks against the real page data
+  - `scripts/build-knowledge.mjs` loads the TSX through Vite's own `runnerImport`, so no `vite-node` dependency was needed. Output is deterministic (checked by running it twice)
+  - Differences from the original task: image alt text is left out (no useful facts), and link labels are `Section › Entry title`, e.g. "Experience › Software Developer Team Lead"
 - [ ] **0.5 `api/knowledge/faq.md`** (You write the answers, I draft the questions). Work authorization, earliest start date, remote / hybrid / on-site preference, relocation (Charlotte, January 2027; open to elsewhere?), travel, notice period, "salary → ask Jack directly", contact. Only things you're happy to have quoted to any recruiter.
 - [ ] **0.6 `api/knowledge/system-prompt.md`** (version 1)
   - Role: answers recruiters' questions about Jack Treadwell, using only the text in `<knowledge>`.

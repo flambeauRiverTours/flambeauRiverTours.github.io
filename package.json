@@ -10,7 +10,9 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "test": "vitest run",
+    "build:knowledge": "node scripts/build-knowledge.mjs"
   },
   "dependencies": {
     "bootstrap": "^5.3.3",
@@ -31,6 +33,7 @@
     "gh-pages": "^6.1.1",
     "sass": "^1.72.0",
     "typescript": "^5.2.2",
-    "vite": "^8.2.2"
+    "vite": "^8.2.2",
+    "vitest": "^4.1.12"
   }
 }

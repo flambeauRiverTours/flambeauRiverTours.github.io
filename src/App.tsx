@@ -47,7 +47,7 @@ function App() {
 
           <Col>
             <main className="content">
-              <Hero highlights={pageData.getHighlights()} />
+              <Hero profile={pageData.getProfile()} highlights={pageData.getHighlights()} />
               {sections.map((sectionData: ISectionData, index: number) =>
                 <div key={sectionData.id}>
                   {sectionData.group === SectionGroup.personal && sections[index - 1]?.group !== SectionGroup.personal ?

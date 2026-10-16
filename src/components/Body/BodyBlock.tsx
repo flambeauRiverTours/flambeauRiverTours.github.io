@@ -18,7 +18,7 @@ function BodyBlock(props: IBodyBlockProps){
                 {renderBody(value.body)}
               </div>
             case BodyBlockStyle.contentBlock:
-              return <div key={key} className={value.title ? "entry" : undefined}>
+              return <div key={key} id={value.id} className={value.title ? "entry" : undefined}>
                 {value.title ? <h3>{value.title}</h3> : null}
                 {value.subtitle ? <p className="entryMeta">{value.subtitle}</p> : null}
                 {renderBody(value.body)}

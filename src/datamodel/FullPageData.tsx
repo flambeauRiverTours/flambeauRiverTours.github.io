@@ -1,4 +1,4 @@
-import { BodyBlockStyle, IHighlight, ISectionData, SectionGroup } from "./SectionData";
+import { BodyBlockStyle, IHighlight, IProfile, ISectionData, SectionGroup } from "./SectionData";
 import fantasyFootballImgUrl from '../assets/FantasyFootball.png';
 import peruImgUrl from '../assets/Peru.jpg';
 import koreaImgUrl from '../assets/Korea.jpg';
@@ -34,6 +34,18 @@ export class FullPageData {
      */
     public getSectionDataArray(): ISectionData[] {
         return this.__sectionData;
+    }
+
+    /**
+     * Gets the name, role, and location shown in the hero
+     * @returns The profile summary
+     */
+    public getProfile(): IProfile {
+        return {
+            name: "Jack Treadwell",
+            role: "Senior Software Engineer · .NET, Azure & React",
+            location: "Berlin, Germany · Relocating to Charlotte, NC in January 2027",
+        };
     }
 
     /**
@@ -106,6 +118,7 @@ export class FullPageData {
             style: BodyBlockStyle.titleBlock,
         });
         sectionData.bodyTextSections.push({
+            id: "experience-spie",
             title: "Senior Software Engineer",
             subtitle: "SPIE SAG GmbH · Berlin, Germany · Aug 2024 – Present",
             body: bulletList([
@@ -117,6 +130,7 @@ export class FullPageData {
             style: BodyBlockStyle.contentBlock,
         });
         sectionData.bodyTextSections.push({
+            id: "experience-epic-lead",
             title: "Software Developer Team Lead",
             subtitle: "Epic Systems · Madison, WI · Mar 2021 – May 2024",
             body: bulletList([
@@ -128,6 +142,7 @@ export class FullPageData {
             style: BodyBlockStyle.contentBlock,
         });
         sectionData.bodyTextSections.push({
+            id: "experience-epic-developer",
             title: "Software Developer",
             subtitle: "Epic Systems · Madison, WI · Jun 2018 – Mar 2021",
             body: bulletList([
@@ -139,6 +154,7 @@ export class FullPageData {
             style: BodyBlockStyle.contentBlock,
         });
         sectionData.bodyTextSections.push({
+            id: "experience-skills",
             title: "Skills",
             body: <dl className="skillList">
                 <dt>Languages</dt><dd>C#, TypeScript, JavaScript, SQL, M (MUMPS)</dd>
@@ -150,6 +166,7 @@ export class FullPageData {
             style: BodyBlockStyle.contentBlock,
         });
         sectionData.bodyTextSections.push({
+            id: "experience-certifications",
             title: "Certifications & Education",
             body: bulletList([
                 "Microsoft Certified: AZ-400, Designing and Implementing Microsoft DevOps Solutions (2026)",
@@ -178,6 +195,7 @@ export class FullPageData {
             style: BodyBlockStyle.titleBlock,
         });
         sectionData.bodyTextSections.push({
+            id: "projects-fantasy-football",
             title: "Real-Time Fantasy Football Scoreboard",
             subtitle: "Aug – Oct 2026 · .NET 10, React, Azure",
             body: "A live leaderboard and analytics site for my fantasy football league. It pairs a React frontend with a .NET 10 backend on Azure Functions and Static Web Apps, uses Blob and SQL storage, and deploys through GitHub Actions. It keeps scores current while running for about $0.25 a month. The write-up covers the architecture, the constraints I designed around, and the problems I solved along the way.",
@@ -191,6 +209,7 @@ export class FullPageData {
             ],
         });
         sectionData.bodyTextSections.push({
+            id: "projects-tidbyt",
             title: "Tidbyt Berlin Transit App",
             subtitle: "2024 · Open source · Starlark, REST APIs",
             body: <p>I've had a <a href="https://tidbyt.com/">Tidbyt</a> for a number of years, and as a user of public transit in Berlin, I wanted to see upcoming departures on it. So I built an app that pulls train timing and departure data from the VBB transit authority and displays it in a user-friendly way. It was a great opportunity to contribute to an open-source project, and good practice working with RESTful APIs.</p>,

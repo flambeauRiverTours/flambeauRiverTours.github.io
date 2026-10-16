@@ -41,6 +41,11 @@ $header-bar-height: 4rem;
   .pageSection{
     scroll-margin-top: $header-bar-height + 1rem;
   }
+
+  // entries already have top padding, so clearing the header bar is enough
+  .entry{
+    scroll-margin-top: $header-bar-height;
+  }
 }
 
 // Centred reading column for the main content

@@ -9,7 +9,7 @@ import { renderBody, renderLinks } from "./BodyContent";
 function ImageBodyText(props: IImageBodyTextProps) {
 
     return (
-        <div className="entry">
+        <div id={props.bodyTextSection.id} className="entry">
             <h3>{props.bodyTextSection.title}</h3>
             {props.bodyTextSection.subtitle ? <p className="entryMeta">{props.bodyTextSection.subtitle}</p> : null}
             {props.bodyTextSection.imagePath ?
