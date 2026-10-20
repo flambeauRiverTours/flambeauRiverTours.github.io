@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -9,7 +9,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Azure.Identity" Version="1.21.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Portfolio.Assistant.Core\Portfolio.Assistant.Core.csproj" />
+    <ProjectReference Include="..\Portfolio.Assistant.Foundry\Portfolio.Assistant.Foundry.csproj" />
   </ItemGroup>
 
 </Project>

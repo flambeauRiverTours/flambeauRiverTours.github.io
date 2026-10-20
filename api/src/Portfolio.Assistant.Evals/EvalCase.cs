@@ -13,7 +13,8 @@ namespace Portfolio.Assistant.Evals
         IReadOnlyList<string>? MustNotMatch = null,
         IReadOnlyList<string>? ExpectedLinks = null,
         string? Note = null,
-        string? PassExample = null)
+        string? PassExample = null,
+        IReadOnlyList<string>? MustMatchOrLink = null)
     {
         /// <summary>The earlier turns as chat messages.</summary>
         public IReadOnlyList<ChatMessage> HistoryMessages =>

@@ -6,7 +6,7 @@ import faqText from "../api/knowledge/faq.md?raw";
 
 const categories = ["fact", "faq", "multi_hop", "trap", "numbers", "privacy", "jailbreak", "off_topic", "opinion", "commitment", "multi_turn", "robustness", "meta", "links", "personal", "sensitive"];
 const expectations = ["answer", "deny", "idk", "refuse", "decline"];
-const allowedFields = ["id", "category", "question", "history", "expect", "mustMatch", "mustNotMatch", "expectedLinks", "note", "passExample"];
+const allowedFields = ["id", "category", "question", "history", "expect", "mustMatch", "mustMatchOrLink", "mustNotMatch", "expectedLinks", "note", "passExample"];
 
 interface IEvalCase {
     id: string;
@@ -15,6 +15,7 @@ interface IEvalCase {
     history?: { role: string; content: string }[];
     expect: string;
     mustMatch?: string[];
+    mustMatchOrLink?: string[]; //linking any of these counts as meeting mustMatch
     mustNotMatch?: string[];
     expectedLinks?: string[];
     note?: string;
@@ -67,7 +68,7 @@ describe("api/evals/questions.jsonl", () => {
     });
 
     it("only expects links that exist on the page", () => {
-        const unknown = cases.flatMap((evalCase) => (evalCase.expectedLinks ?? []).filter((id) => !linkIds.includes(id)).map((id) => `${evalCase.id}: ${id}`));
+        const unknown = cases.flatMap((evalCase) => [...(evalCase.expectedLinks ?? []), ...(evalCase.mustMatchOrLink ?? [])].filter((id) => !linkIds.includes(id)).map((id) => `${evalCase.id}: ${id}`));
         expect(unknown).toEqual([]);
     });
 

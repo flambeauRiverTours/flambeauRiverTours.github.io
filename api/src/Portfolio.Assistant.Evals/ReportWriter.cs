@@ -7,9 +7,9 @@ namespace Portfolio.Assistant.Evals
     /// <summary>Writes the Markdown report committed to <c>api/evals/results/</c>.</summary>
     internal static class ReportWriter
     {
-        // assumed Phi-4-mini prices; check Foundry's pricing page and edit these when the model changes
+        // Claude Haiku 5.5 list prices for prompts up to 100k tokens; Foundry's pricing page is authoritative, edit these when the model changes
         private const decimal DollarsPerMillionInput = 0.10m;
-        private const decimal DollarsPerMillionOutput = 0.40m;
+        private const decimal DollarsPerMillionOutput = 0.50m;
 
         private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
 
@@ -22,6 +22,21 @@ namespace Portfolio.Assistant.Evals
             var date = context.Date.ToString("yyyy-MM-dd", Invariant);
             var deployment = UnsafeFileNameCharacters.Replace(context.Deployment, "-");
             return $"{date}-{deployment}-{context.PromptVersion}.md";
+        }
+
+        /// <summary>The file name, or the first of <c>name-2.md</c>, <c>name-3.md</c>… not yet taken, so a rerun never replaces a report.</summary>
+        /// <param name="exists">Whether a report with that file name is already in the results folder.</param>
+        public static string UnusedFileName(string fileName, Func<string, bool> exists)
+        {
+            var name = Path.GetFileNameWithoutExtension(fileName);
+            var extension = Path.GetExtension(fileName);
+            var candidate = fileName;
+            for (var number = 2; exists(candidate); number++)
+            {
+                candidate = string.Create(Invariant, $"{name}-{number}{extension}");
+            }
+
+            return candidate;
         }
 
         /// <summary>Renders the verdict, pass rates, links, cost and then each failure.</summary>
@@ -66,6 +81,7 @@ namespace Portfolio.Assistant.Evals
             var scored = results.SelectMany(result => result.Runs).Where(run => run.Grade.Links.ExpectedPresent is not null).ToList();
             var present = scored.Count(run => run.Grade.Links.ExpectedPresent == true);
             var extraPerAnswer = scored.Count == 0 ? 0 : scored.Average(run => run.Grade.Links.Extra);
+            var filtered = results.SelectMany(result => result.Runs).Count(run => run.Filtered);
             var refusalsWithLinks = results.Where(result => result.Case.Expect == Expectation.Refuse)
                 .SelectMany(result => result.Runs)
                 .Count(run => run.Grade.Links.Ids.Count > 0);
@@ -74,6 +90,7 @@ namespace Portfolio.Assistant.Evals
                 .AppendLine(Invariant, $"- Expected links present: {present} / {scored.Count} runs")
                 .AppendLine(Invariant, $"- Extra links per answer: {extraPerAnswer.ToString("0.0", Invariant)}")
                 .AppendLine(Invariant, $"- Refusals with links: {refusalsWithLinks}")
+                .AppendLine(Invariant, $"- Blocked by the content filter: {filtered} run{(filtered == 1 ? "" : "s")}")
                 .AppendLine();
         }
 

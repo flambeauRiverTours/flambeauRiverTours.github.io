@@ -4,7 +4,7 @@
  */
 
 import { renderToStaticMarkup } from "react-dom/server";
-import { BodyBlockStyle, IBodyTextSection, IHighlight, ILink, IProfile, ISectionData } from "../src/datamodel/SectionData";
+import { BodyBlockStyle, IBodyTextSection, IHighlight, ILink, IProfile, ISectionData, SectionGroup } from "../src/datamodel/SectionData";
 import { FullPageData } from "../src/datamodel/FullPageData";
 
 export interface ILinkTarget {
@@ -75,6 +75,11 @@ export function buildSiteKnowledge(): { siteMd: string; links: ILinkTarget[] } {
 }
 
 function sectionToText(section: ISectionData): string {
+    //personal sections keep only their introduction: the deployment breaks above 4,096 prompt tokens, and books and trips matter least to recruiters
+    if (section.group === SectionGroup.personal) {
+        const introduction = section.bodyTextSections.filter((entry) => entry.style === BodyBlockStyle.titleBlock).map((entry) => entryToText(section, entry));
+        return [...introduction, `The individual entries are in the ${section.buttonTitle} section of the page.`].join("\n");
+    }
     return section.bodyTextSections.map((entry) => entryToText(section, entry)).filter((text) => text).join("\n\n");
 }
 

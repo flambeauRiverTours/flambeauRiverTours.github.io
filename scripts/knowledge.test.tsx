@@ -64,6 +64,15 @@ describe("buildKnowledge", () => {
                 { title: "Hobby", body: "Not linkable.", style: BodyBlockStyle.imageBlock, imagePath: "x.jpg" },
             ],
         },
+        {
+            id: "travel",
+            buttonTitle: "Travel",
+            group: SectionGroup.personal,
+            bodyTextSections: [
+                { title: "Travel", body: "I've visited 15 countries.", style: BodyBlockStyle.titleBlock },
+                { title: "Japan", body: "We loved the noodles.", style: BodyBlockStyle.imageBlock, imagePath: "japan.jpg" },
+            ],
+        },
     ];
 
     const build = () => buildKnowledge(profile, highlights, sections);
@@ -96,11 +105,26 @@ describe("buildKnowledge", () => {
             { id: "about", label: "About" },
             { id: "experience", label: "Experience" },
             { id: "experience-acme", label: "Experience › Senior Engineer" },
+            { id: "travel", label: "Travel" },
         ]);
+    });
+
+    it("keeps only the introduction of a personal section, and points to the page for the rest", () => {
+        const { siteMd } = build();
+        expect(siteMd).toContain("# [travel] Travel\nI've visited 15 countries.\nThe individual entries are in the Travel section of the page.");
+        expect(siteMd).not.toContain("noodles");
     });
 });
 
 describe("buildSiteKnowledge", () => {
+    it("leaves out the individual books and trips but keeps the section introductions", () => {
+        const { siteMd } = buildSiteKnowledge();
+        expect(siteMd).not.toContain("Malazan");
+        expect(siteMd).not.toContain("Hobbiton");
+        expect(siteMd).toContain("15 countries and 5 continents");
+        expect(siteMd).toContain("Kindle");
+    });
+
     it("includes the hero facts", () => {
         expect(buildSiteKnowledge().siteMd).toContain("Relocating to Charlotte, NC in January 2027");
     });

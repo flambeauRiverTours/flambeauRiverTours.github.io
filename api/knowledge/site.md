@@ -65,39 +65,8 @@ Links: Merged pull request (https://github.com/tidbyt/community/pull/2518)
 
 # [reading] Reading List
 This is my little journal of books I've read recently that I found particularly interesting, motivating, or just entertaining. They're listed in reverse chronological order, and I try to add a book every few weeks. I generally read on my Kindle Paperwhite and borrow e-books from my local library.
-
-## Malazan Book of the Fallen
-I devoured the Malazan Book of the Fallen series this year. I found the way Erikson trickles out crucial world-building details without ever spoon-feeding the reader to be so enjoyable — the way my conception of his world changed throughout the series kept me engaged.
-
-## 1491: New Revelations of the Americas Before Columbus
-I read 1491 for the first time this year, and I was struck by how much it challenged my assumptions about pre-Columbian America. I found the author's argument about the scale and complexity of Indigenous civilizations to be compelling, and it really made me examine the Indigenous history I was taught in school.
-
-## Autumn in the Heavenly Kingdom
-I went into this book with little knowledge of the Chinese Civil War. As a result, I found the book to be a fascinating and informative read. Platt's contextualization of the events of the war within the broader goings-on of the time period was a particular highlight — before reading this book, I would've thought it was a joke if you'd told me that China was in some way involved in the American Civil War, but this book shows the impact this conflict had, in particular through contrasting Britain's handling of these wars as they occurred simultaneously. This was a bit dense at times, but definitely worth the read.
-
-## Cat's Cradle
-Somewhat surprisingly, I've read very little Vonnegut. I immensely enjoyed the dark humor laced throughout the novel, and, having recently watched Oppenheimer, I found the usage of ice-nine to satirize nuclear weapons and the nuclear arms race to be genius. I also found that the narrator's awkward traversal of social situations hit a little too close to home sometimes.
+The individual entries are in the Reading section of the page.
 
 # [travel] Travel
 I love to travel, and I've been lucky enough to visit 15 countries and 5 continents so far. I've included some of my favorite trips below, and I'm always looking for new places to explore.
-
-## Germany
-One of my goals for 2026 is to visit all 16 (or 17, depending on who you ask) German states. So far I'm at 15, with only Saxony left.
-
-## Crete
-I visited Crete in the summer of 2024 with my partner. We spent three days in Chania and enjoyed the beautiful beaches, the delicious food, and the many historical sites. We especially enjoyed our evening at a winery in the hills outside Chania, where we learned about the native Cretan grape varietals.
-
-## Japan
-I visited Japan in 2023 with my partner, and we had an amazing time. We spent time in Tokyo, Kyoto, Osaka, and Hiroshima, with day trips to Hakone, Nara, and Miyajima. We loved the food (especially the noodles) and the many museums we visited, and we enjoyed a baseball game in Tokyo so much that we went to another game in Hiroshima!
-
-## South Korea
-I visited South Korea in 2023 with my partner as part of the same trip on which we visited Japan. We visited Seoul, Busan, and Jeju, and enjoyed many great hikes, visits to museums and art galleries, and tours of historical sites. We loved the food in South Korea, especially the street food, banchan, and Korean BBQ.
-
-## New Zealand & Australia
-We visited New Zealand and Australia in late 2022/early 2023. We especially enjoyed hiking Mt. Doom and touring Hobbiton in New Zealand, along with many delicious dinners of seafood and local wine. In Australia, we enjoyed Christmas lunch on the beach, New Year's fireworks at Sydney Harbour, and many holiday celebrations with my partner's family.
-
-## Banff & Yoho National Parks
-We traveled to Banff and Yoho National Parks in Canada with my partner's uncle in the summer of 2022. We spent our days on breathtaking hikes and fly fishing in glacial streams, and we had an amazing time. We enjoyed evenings camping out and saw lots of interesting wildlife, including a moose calf.
-
-## Peru
-We traveled to Peru in the summer of 2019 with a group of family and friends. We spent a few days south of Lima, riding dune buggies through the desert and taking a boat ride to a seabird reserve, then flew up to Cusco for a hike up to Machu Picchu. We were especially lucky to be in the country when Peru won its semifinal in that year's Copa América, and got to join the celebrations with locals in Aguas Calientes.
+The individual entries are in the Travel section of the page.

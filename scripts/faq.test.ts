@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import faqText from "../api/knowledge/faq.md?raw";
-
 //answers that stop being true on a known date, so the assistant doesn't keep telling recruiters Jack is in Berlin
 const timeBoundAnswers = [
     { text: "Until January 2027", staleFrom: "2027-01-01" },

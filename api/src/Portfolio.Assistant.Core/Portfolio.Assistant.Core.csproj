@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <!-- Pure logic shared by the Function and the eval runner: no I/O, no Azure SDKs -->
 

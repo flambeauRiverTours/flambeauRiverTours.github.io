@@ -17,7 +17,7 @@ namespace Portfolio.Assistant.Evals
             var text = casesByConversation.TryGetValue(Key(prompt.Messages.Select(message => message.Content)), out var evalCase)
                 ? $"{evalCase.PassExample}\nLinks: {Links(evalCase)}"
                 : "There's no example answer for this case.\nLinks: none";
-            return Task.FromResult(new ModelAnswer(text, 0, 0, Deployment));
+            return Task.FromResult(new ModelAnswer(text, 0, 0));
         }
 
         // keyed on the whole conversation, since some cases share a question but not a history

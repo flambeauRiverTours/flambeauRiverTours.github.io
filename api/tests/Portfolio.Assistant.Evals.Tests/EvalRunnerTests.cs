@@ -17,7 +17,36 @@ namespace Portfolio.Assistant.Evals.Tests
         public Task<ModelAnswer> AnswerAsync(Prompt prompt, CancellationToken cancellationToken)
         {
             Prompts.Add(prompt);
-            return Task.FromResult(new ModelAnswer(answer(prompt), 100, 10, Deployment));
+            return Task.FromResult(new ModelAnswer(answer(prompt), 100, 10));
+        }
+    }
+
+    /// <summary>
+    /// A model whose content filter blocks every question.
+    /// </summary>
+    internal sealed class FilteringModel : IAnswerModel
+    {
+        public string Deployment => "filtering";
+
+        public Task<ModelAnswer> AnswerAsync(Prompt prompt, CancellationToken cancellationToken) =>
+            Task.FromResult(new ModelAnswer(ModelAnswer.FilteredReply, 0, 0, Filtered: true));
+    }
+
+    /// <summary>
+    /// A model that never answers the questions it is told to hang on, like a call on a dead connection.
+    /// </summary>
+    internal sealed class HangingModel(Func<Prompt, bool> hangs, bool ignoresCancellation = false) : IAnswerModel
+    {
+        public string Deployment => "hanging";
+
+        public async Task<ModelAnswer> AnswerAsync(Prompt prompt, CancellationToken cancellationToken)
+        {
+            if (hangs(prompt))
+            {
+                await Task.Delay(Timeout.Infinite, ignoresCancellation ? CancellationToken.None : cancellationToken);
+            }
+
+            return new ModelAnswer("Jack works at SPIE.\nLinks: none", 100, 10);
         }
     }
 
@@ -25,12 +54,30 @@ namespace Portfolio.Assistant.Evals.Tests
     {
         private static readonly KnowledgeBase Knowledge = KnowledgeBase.Create("Rules.", "Site", "FAQ", []);
         private static readonly Grader Grader = new(new HashSet<string> { "about" });
+        private static readonly Func<Prompt, bool> SlowQuestion = prompt => prompt.Messages[^1].Content == "Slow?";
 
         private static EvalCase Case(string id, string question = "Where does Jack work?", IReadOnlyList<HistoryMessage>? history = null) =>
             new(id, Category.Fact, question, Expectation.Answer, History: history, MustMatch: ["SPIE"]);
 
+        // a 2-minute deadline cut off 6 throttled but healthy calls in a full run on 2026-10-20;
+        // the runner allows 8 attempts of up to 30 s each, plus the Retry-After waits between them
+        [Fact]
+        public void The_default_deadline_outlasts_the_sdks_own_retries() =>
+            EvalRunner.DefaultCallTimeout.Should().BeGreaterThan(TimeSpan.FromSeconds(30) * 8);
+
         private static Task<IReadOnlyList<CaseResult>> Run(IAnswerModel model, IReadOnlyList<EvalCase> cases, int runs = 3) =>
             new EvalRunner(model, Knowledge, Grader).RunAsync(cases, runs, parallelism: 2, TestContext.Current.CancellationToken);
+
+        private static Task<IReadOnlyList<CaseResult>> RunWithDeadline(IAnswerModel model, IReadOnlyList<EvalCase> cases, CancellationToken cancellationToken) =>
+            new EvalRunner(model, Knowledge, Grader, callTimeout: TimeSpan.FromMilliseconds(100)).RunAsync(cases, runs: 1, parallelism: 2, cancellationToken);
+
+        private static async Task<string[]> ProgressLines(string answer, int calls)
+        {
+            var progress = new StringWriter();
+            await new EvalRunner(new ScriptedModel(_ => answer), Knowledge, Grader, progress)
+                .RunAsync([Case("a")], calls, parallelism: 4, TestContext.Current.CancellationToken);
+            return progress.ToString().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+        }
 
         [Fact]
         public async Task Each_case_is_asked_once_per_run()
@@ -126,6 +173,65 @@ namespace Portfolio.Assistant.Evals.Tests
             prompt.Messages.Select(message => (message.Role, message.Content)).Should().Equal(
                 (ChatRole.User, "Where does Jack work?"), (ChatRole.Assistant, "At SPIE."), (ChatRole.User, "And before that?"));
         }
+
+        [Fact]
+        public async Task An_answer_blocked_by_the_content_filter_is_marked_as_filtered()
+        {
+            var model = new FilteringModel();
+
+            var run = (await Run(model, [Case("a")], runs: 1)).Single().Runs.Single();
+
+            run.Filtered.Should().BeTrue();
+            run.Raw.Should().Be(ModelAnswer.FilteredReply);
+        }
+
+        [Fact]
+        public async Task A_call_that_never_returns_fails_as_timed_out_instead_of_hanging()
+        {
+            var run = (await RunWithDeadline(new HangingModel(_ => true), [Case("a")], TestContext.Current.CancellationToken)).Single().Runs.Single();
+
+            run.Grade.Passed.Should().BeFalse();
+            run.Grade.Failures.Should().ContainSingle(failure => failure.Contains("timed out after"));
+        }
+
+        [Fact]
+        public async Task A_call_that_ignores_cancellation_still_times_out()
+        {
+            var model = new HangingModel(_ => true, ignoresCancellation: true);
+
+            var run = (await RunWithDeadline(model, [Case("a")], TestContext.Current.CancellationToken)).Single().Runs.Single();
+
+            run.Grade.Failures.Should().ContainSingle(failure => failure.Contains("timed out after"));
+        }
+
+        [Fact]
+        public async Task A_timed_out_call_does_not_cancel_the_other_runs()
+        {
+            var results = await RunWithDeadline(new HangingModel(SlowQuestion), [Case("slow", question: "Slow?"), Case("a"), Case("b")], TestContext.Current.CancellationToken);
+
+            results.Select(result => result.Passed).Should().Equal(false, true, true);
+        }
+
+        [Fact]
+        public async Task Cancelling_the_eval_stops_every_call_instead_of_timing_them_out()
+        {
+            using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+            cancellation.CancelAfter(TimeSpan.FromMilliseconds(50));
+            var runner = new EvalRunner(new HangingModel(_ => true), Knowledge, Grader);
+
+            await FluentActions.Awaiting(() => runner.RunAsync([Case("a"), Case("b")], runs: 1, parallelism: 2, cancellation.Token))
+                .Should().ThrowAsync<OperationCanceledException>();
+        }
+
+        [Fact]
+        public async Task Progress_is_printed_every_50_calls_and_at_the_end() =>
+            (await ProgressLines("Jack works at SPIE.\nLinks: none", calls: 120))
+                .Should().Equal("50 / 120 calls done (0 failed)", "100 / 120 calls done (0 failed)", "120 / 120 calls done (0 failed)");
+
+        [Fact]
+        public async Task Progress_counts_the_failed_runs() =>
+            (await ProgressLines("Jack works in Berlin.\nLinks: none", calls: 60))
+                .Should().Equal("50 / 60 calls done (50 failed)", "60 / 60 calls done (60 failed)");
 
         [Fact]
         public async Task Token_counts_are_kept_per_run()

@@ -4,13 +4,14 @@ namespace Portfolio.Assistant.Evals
 {
     /// <summary>The runner's command-line options.</summary>
     /// <param name="SelfTest">Answer with each case's passExample instead of a model.</param>
+    /// <param name="Deployment">The Claude deployment in the Foundry resource.</param>
     /// <param name="Runs">How many times to ask each question.</param>
     /// <param name="Parallelism">How many calls to make at once.</param>
     /// <param name="Categories">Only these categories; null runs all.</param>
     /// <param name="Ids">Only these cases; null runs all.</param>
     internal sealed record EvalOptions(
         bool SelfTest = false,
-        string Deployment = "Phi-4-mini-instruct-portfolio-chatbot",
+        string Deployment = "claude-haiku-5-5",
         int Runs = 3,
         int Parallelism = 3,
         IReadOnlyList<Category>? Categories = null,
@@ -21,7 +22,7 @@ namespace Portfolio.Assistant.Evals
             Usage: dotnet run --project api/src/Portfolio.Assistant.Evals -- [options]
 
               --self-test            Answer with each case's passExample instead of calling a model (free; checks the pipeline)
-              --deployment <name>    Foundry deployment to evaluate (default: Phi-4-mini-instruct-portfolio-chatbot)
+              --deployment <name>    Claude deployment to evaluate (default: claude-haiku-5-5)
               --runs <n>             Times to ask each question; a case passes only if every run passes (default: 3)
               --parallel <n>         Calls at once; keep low for the deployment's rate limit (default: 3)
               --category <a,b>       Only these categories, e.g. trap,privacy

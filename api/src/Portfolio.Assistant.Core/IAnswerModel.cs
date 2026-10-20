@@ -1,6 +1,6 @@
 ﻿namespace Portfolio.Assistant.Core
 {
-    /// <summary>Answers a prompt; Foundry implements it in task 1.4.</summary>
+    /// <summary>Answers a prompt with a language model.</summary>
     public interface IAnswerModel
     {
         /// <summary>The deployment name, for reports and logs.</summary>

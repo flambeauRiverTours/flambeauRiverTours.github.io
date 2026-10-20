@@ -59,6 +59,18 @@ Browser (GitHub Pages, jacktreadwell.com)
 
 **Deployment capacity.** The deployment's capacity is 1, confirmed as **1 request and 1,000 tokens a minute**. That's less than one assistant request (~4.5k tokens), so every real request would be throttled. Raise it to 20 (20 requests and 20k tokens a minute). It's also the hard cost ceiling, so keep it no higher than that.
 
+**Foundry findings (tested 2026-10-16 to 2026-10-19).** Three behaviours of the Phi-4-mini deployment that the design has to live with:
+1. **System messages are silently dropped.** Rules sent with the `system` role are ignored and don't count toward `prompt_tokens`; the same text at the start of the user message is obeyed. The Foundry client folds the rules into the first user message by default (a setting, for models that honour the system role). Rules in a user turn are easier for a visitor to override, so the jailbreak evals matter more.
+2. **Calls sometimes hang** for 90 seconds or more and then a retry answers in one second. The client abandons a call after 30 seconds and retries.
+3. **Output turns to garbage above 4,096 input tokens.** The same prompt answers correctly at 3,865 tokens and returns only dots at 4,145; non-ASCII characters aren't the cause. Phi-4-mini switches its long-context scaling at 4,096 tokens, and this deployment appears to get that wrong. The full prompt (rules + `site.md` + `faq.md`) is about 4,440 tokens before any history, so **with this deployment the assistant can't work as designed.** Options, for a decision before the baseline (0.9):
+   - Shrink the prompt below about 3,500 tokens so history and the answer fit: for example, drop Reading and Travel from the knowledge, and tighten `faq.md`.
+   - Deploy a different small or mid-size model (≤ $3/month) that handles long prompts, and choose by evals as planned.
+   - Redeploy Phi-4-mini (a different version or deployment type) and retest the 4,096 boundary.
+
+   **Update, afternoon of 2026-10-19: the limit isn't stable.** After the shrink, round 2 of tuning returned garbage for its last 8 of 24 cases at about 3,000 tokens, and probes then showed coherent answers at 2,314 tokens but garbage at 3,020, where the same morning 3,865 tokens had worked. The deployment's usable prompt size drifts over time, so it can't be designed around reliably. Together with findings 1 and 2, this deployment isn't fit for the assistant as it stands.
+
+   **Decided 2026-10-19: shrink the prompt.** Reading and Travel keep only their introductions (plus a pointer to the page), and `faq.md` is now terse labelled facts. The prompt went from about 4,440 to about 2,980 tokens; a four-turn conversation with a full 400-token answer peaks around 3,600. `scripts/prompt-budget.test.ts` fails if the fixed prompt grows past 3,300 tokens, and the limit and the measured characters-per-token ratio are written there.
+
 **Phi-4-mini: what to expect.** It's cheap and fast, and the knowledge file fits its context window easily. The risk is the one that matters most here: small models are more likely than large ones to fill gaps with plausible inventions and to follow jailbreak prompts. (In the auth test, asked to "Reply with the single word: ok", it started "Sure, I'm here to", a small hint of loose instruction following.) The prompt does extra work to compensate:
 - Short, strict rules: answer only from the knowledge text; otherwise say "I don't know, ask Jack" and give the email link.
 - Low temperature and short answers (2–4 sentences).
@@ -154,5 +166,6 @@ The existing Foundry setup saves some backend work. Entry anchors, link checking
 7. Deployment capacity: confirmed at 1 (1 request and 1,000 tokens a minute); raise to 20 (task 0.1 in `tasks/todo.md`)
 8. Large models are out of scope: a candidate's projected cost must be ≤ $3/month at 1k questions; if none passes, ship the FAQ
 9. Replace the Jules Function app (`func-portfolio-ai-chat`, Windows Consumption) with a new Flex Consumption app from Bicep, then delete the old resources
+10. Model (2026-10-19): **Claude Haiku 5.5** (`claude-haiku-5-5`, Hosted on Azure, 50k tokens a minute), called through `Anthropic.Foundry` with thinking off and low effort. On the same 24 cases it scored 23/24, against 18/24 for gpt-4.1-mini and about 4/16 coherent answers for Phi-4-mini. It costs about $0.50 a month at 1,000 questions. Tuning took the full eval set from 271/335 (81%) to 323–327/335 (96–98%), with no invented facts, private details or stances; accepted as good enough to launch on (2026-10-20). Summary of the runs, rounds and decisions: `tasks/model-evaluation.md`.
 
 The build order with technical details is in `tasks/todo.md` ("LLM assistant: implementation tasks").

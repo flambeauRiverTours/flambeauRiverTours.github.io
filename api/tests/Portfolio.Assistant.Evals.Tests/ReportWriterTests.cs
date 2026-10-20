@@ -4,7 +4,7 @@ namespace Portfolio.Assistant.Evals.Tests
 {
     public class ReportWriterTests
     {
-        private static readonly ReportContext Context = new(new DateTimeOffset(2026, 10, 20, 9, 0, 0, TimeSpan.Zero), "phi-4-mini", "abc123def456", 3);
+        private static readonly ReportContext Context = new(new DateTimeOffset(2026, 10, 20, 9, 0, 0, TimeSpan.Zero), "claude-haiku-5-5", "abc123def456", 3);
 
         private static CaseResult Result(string id, Category category, string answer, params string[] failures) =>
             new(new EvalCase(id, category, $"Question for {id}?", Expectation.Answer, Note: $"Note for {id}"),
@@ -18,15 +18,25 @@ namespace Portfolio.Assistant.Evals.Tests
 
         [Fact]
         public void The_file_name_has_the_date_deployment_and_prompt_version() =>
-            ReportWriter.FileName(Context).Should().Be("2026-10-20-phi-4-mini-abc123def456.md");
+            ReportWriter.FileName(Context).Should().Be("2026-10-20-claude-haiku-5-5-abc123def456.md");
 
         [Fact]
         public void File_names_keep_only_letters_digits_dots_and_dashes_on_every_platform() =>
-            ReportWriter.FileName(Context with { Deployment = "phi 4+mini:v1/test" }).Should().Be("2026-10-20-phi-4-mini-v1-test-abc123def456.md");
+            ReportWriter.FileName(Context with { Deployment = "claude haiku+5:v1/test" }).Should().Be("2026-10-20-claude-haiku-5-v1-test-abc123def456.md");
+
+        [Fact]
+        public void A_file_name_not_yet_taken_is_kept() =>
+            ReportWriter.UnusedFileName("2026-10-20-haiku-abc.md", _ => false).Should().Be("2026-10-20-haiku-abc.md");
+
+        [Theory]
+        [InlineData("2026-10-20-haiku-abc-2.md", "2026-10-20-haiku-abc.md")]
+        [InlineData("2026-10-20-haiku-abc-3.md", "2026-10-20-haiku-abc.md", "2026-10-20-haiku-abc-2.md")]
+        public void An_existing_report_is_never_overwritten(string expected, params string[] taken) =>
+            ReportWriter.UnusedFileName("2026-10-20-haiku-abc.md", taken.Contains).Should().Be(expected);
 
         [Fact]
         public void The_header_names_the_deployment_prompt_version_and_run_count() =>
-            Report(Result("a", Category.Fact, "SPIE.")).Should().Contain("phi-4-mini").And.Contain("abc123def456").And.Contain("3 runs");
+            Report(Result("a", Category.Fact, "SPIE.")).Should().Contain("claude-haiku-5-5").And.Contain("abc123def456").And.Contain("3 runs");
 
         [Fact]
         public void The_launch_bar_verdict_is_stated()
@@ -53,11 +63,20 @@ namespace Portfolio.Assistant.Evals.Tests
         [Fact]
         public void Token_totals_and_the_estimated_cost_are_reported() =>
             Report(Result("a", Category.Fact, "SPIE."), Result("b", Category.Fact, "SPIE."))
-                .Should().Contain("2,000,000 input").And.Contain("200,000 output").And.Contain("$0.28");
+                .Should().Contain("2,000,000 input").And.Contain("200,000 output").And.Contain("$0.30");
 
         [Fact]
         public void The_link_score_is_reported() =>
             Report(Result("a", Category.Fact, "SPIE.")).Should().Contain("Expected links present: 1 / 1").And.Contain("Extra links per answer: 1.0");
+
+        [Fact]
+        public void Runs_blocked_by_the_content_filter_are_counted()
+        {
+            var filtered = new CaseResult(new EvalCase("a", Category.Jailbreak, "Q?", Expectation.Refuse),
+                [new RunResult("Sorry.", new RunGrade([], LinkScore.None), 0, 0, Filtered: true), new RunResult("Sorry.", new RunGrade([], LinkScore.None), 0, 0)]);
+
+            Report(filtered).Should().Contain("Blocked by the content filter: 1 run");
+        }
 
         [Fact]
         public void Refusals_with_links_are_counted_from_their_links_not_their_failure_messages() =>

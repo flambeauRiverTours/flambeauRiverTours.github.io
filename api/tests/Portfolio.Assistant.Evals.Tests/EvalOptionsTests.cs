@@ -11,10 +11,10 @@ namespace Portfolio.Assistant.Evals.Tests
         [Fact]
         public void Every_option_is_read()
         {
-            var options = EvalOptions.Parse(["--self-test", "--deployment", "gpt-mini", "--runs", "1", "--parallel", "5", "--category", "trap,privacy", "--id", "a,b"]);
+            var options = EvalOptions.Parse(["--self-test", "--deployment", "haiku-test", "--runs", "1", "--parallel", "5", "--category", "trap,privacy", "--id", "a,b"]);
 
             options.SelfTest.Should().BeTrue();
-            options.Deployment.Should().Be("gpt-mini");
+            options.Deployment.Should().Be("haiku-test");
             options.Runs.Should().Be(1);
             options.Parallelism.Should().Be(5);
             options.Categories.Should().Equal(Category.Trap, Category.Privacy);
@@ -24,6 +24,8 @@ namespace Portfolio.Assistant.Evals.Tests
         [Theory]
         [InlineData("Unknown option: --bogus", "--bogus")]
         [InlineData("Unknown option: --price-in", "--price-in", "0.5")]
+        [InlineData("Unknown option: --chat-completions", "--chat-completions")]
+        [InlineData("Unknown option: --system-role", "--system-role")]
         [InlineData("--runs needs a value", "--runs")]
         [InlineData("--runs needs a whole number of at least 1", "--runs", "zero")]
         [InlineData("--runs needs a whole number of at least 1", "--runs", "0")]
@@ -31,6 +33,10 @@ namespace Portfolio.Assistant.Evals.Tests
         [InlineData("Unknown category: trapz", "--category", "trapz")]
         public void A_wrong_option_throws_with_a_message_saying_what_is_wrong(string message, params string[] args) =>
             FluentActions.Invoking(() => EvalOptions.Parse(args)).Should().Throw<UsageException>().WithMessage(message);
+
+        [Fact]
+        public void By_default_the_runner_evaluates_claude_haiku_5_5() =>
+            EvalOptions.Parse([]).Deployment.Should().Be("claude-haiku-5-5");
 
         [Fact]
         public void Categories_use_the_same_names_as_the_eval_set() =>

@@ -60,15 +60,16 @@ scripts/
   - Link grading: refusals must end with `Links: none`; a link score (recall and extra links) is reported alongside the pass rate
   - 130 high-risk cases have a `passExample`, a good answer the test checks against the case's own patterns. Adding them caught 14 patterns that would have failed correct denials
   - `npm test` validates the file (`scripts/evals.test.ts`): ids, fields, regexes, history, links that exist, every page anchor covered, minimum counts for high-risk categories, and every expected fact in the fact-based categories actually present in `site.md` or `faq.md`
-- [ ] **0.8 Eval runner `Portfolio.Assistant.Evals`**: structure done, waiting on the Foundry client (1.4)
+- [x] **0.8 Eval runner `Portfolio.Assistant.Evals`**: done; real runs work (checked with one case on 2026-10-19)
   - [x] Solution `api/Portfolio.Assistant.slnx` with FantasyFootball's conventions (`Directory.Build.props`, `.editorconfig`, warnings as errors, XML docs, xUnit v3 + FluentAssertions)
   - [x] `Portfolio.Assistant.Core`: `IAnswerModel`, `Prompt`, `ChatMessage`, `ModelAnswer`, `LinkTarget`; `KnowledgeBase` (system message + 12-character prompt version, line endings normalized so Windows and CI agree); `PromptBuilder`. 10 tests
   - [x] `Portfolio.Assistant.Evals`: `Grader` (every rule in `api/evals/README.md`), `EvalRunner` (N runs per case, a few calls at a time, a failed call fails only that run), `LaunchBar`, `ReportWriter`, `EvalOptions`, `PassExampleModel`. 209 tests, including every `passExample` through the full grader
   - [x] `--self-test` runs the whole pipeline without Azure: 130 / 130 cases pass, launch bar met
-  - [ ] `FoundryAnswerModel` (task 1.4): implements `IAnswerModel`, signs in with `DefaultAzureCredential`, waits and retries on `429`/`Retry-After`. Then remove the "isn't built yet" exit in `Program.cs`
-  - Run time: a full run (335 cases × 3) is about 4.7M tokens, about 4 hours at 20k tokens/minute. Raise the deployment's capacity temporarily for full runs.
+  - [x] `Portfolio.Assistant.Foundry`: `FoundryAnswerModel` signs in with the Azure CLI credential (DefaultAzureCredential picked up another account and got 401), folds the rules into the first user message, times out a call after 30 s and retries timeouts, 408, 429 (honouring `Retry-After`) and 5xx, stops at once on 401/404/400, and returns the fixed filtered reply when the content filter blocks a question. 17 tests. Real runs need `az login` and `FOUNDRY_ENDPOINT`
+  - Run time: a full run (335 cases × 3) is about 4.9M tokens on Claude Haiku 5.5, about 90 minutes at the deployment's 50k tokens/minute.
   - Regex grading misses things, so read every trap and jailbreak answer by hand on each run that changes the prompt or model.
-- [ ] **0.9 First baseline run** against Phi-4-mini, committed as the starting point. Expect failures; tuning is Phase 4.
+- [x] **0.9 First baseline run**, committed as the starting point (the commit waits for your review). Run 2026-10-19 against Claude Haiku 5.5 (chosen in 4.2), prompt `c4c1e4f117cd`, 335 cases × 3 runs: report `api/evals/results/2026-10-19-claude-haiku-5-5-c4c1e4f117cd.md` (the earlier 24-case report is kept as `…-24-cases.md`).
+  - Six more full runs followed, ending at 323–327 / 335 (96–98%) on prompt `5b0f371dd542`. Results, failure analysis and decisions are summarized in [model-evaluation.md](model-evaluation.md).
 - **Done when:** entry links work in the browser at both widths; `npm run build:knowledge` produces `site.md` + `links.json`; you've approved `faq.md`; the baseline report exists.
 
 ## Phase 1: backend (≈ 1 day)
@@ -78,9 +79,10 @@ scripts/
 - [ ] **1.3 Core (pure functions, all unit-tested in 1.9)**
   - `AskRequestValidator`: body ≤ 16 KB; `question` trimmed, 1–500 chars; `history` ≤ 4 turns (8 messages), roles `user`/`assistant` only, each ≤ 1,500 chars. Returns a typed error for the 400 response.
   - `PromptBuilder`: system message (system prompt + knowledge), then history, then the question.
-  - `LinkExtractor`: takes the raw model text, finds the last non-empty line matching `^\s*Links:\s*(.*)$` (case-insensitive), splits on commas, trims, lowercases and dedupes. Keeps IDs present in `links.json`, at most 3, in order, and removes the line from the answer. A missing or garbled line → no links, answer unchanged. Also strips Markdown link syntax and bare URLs from the answer text.
+  - `LinkExtractor`: takes the raw model text, finds the last non-empty line matching `^\s*Links:\s*(.*)$` (case-insensitive) or, like the eval grader, a well-formed `Links: ...` ending the last sentence (Phi-4-mini's usual format), splits on commas, trims, lowercases and dedupes. Keeps IDs present in `links.json`, at most 3, in order, and removes the line from the answer. A missing or garbled line → no links, answer unchanged. Also strips Markdown link syntax and bare URLs from the answer text.
   - `RateLimitPolicy`: given the current counters and `now`, decides allow or deny and returns `retryAfterSeconds`.
 - [ ] **1.4 Foundry client behind `IAnswerModel`**
+  - **Mostly done:** `Portfolio.Assistant.Foundry.ClaudeAnswerModel` exists and is tested, built with `ClaudeAnswerModel.ForFoundry(endpoint, deployment, credential, maxRetries)` so no Anthropic SDK type leaves the project. What's left for the Function: read the endpoint and deployment from settings, pass a managed-identity credential instead of the Azure CLI one, and keep `maxRetries` low (1–2) so a visitor never waits long. The raw-REST chat-completions client used for Phi and GPT was removed on 2026-10-20 once Haiku was chosen.
   - `Task<ModelAnswer> AnswerAsync(IReadOnlyList<ChatMessage> messages, CancellationToken ct)` → text, input/output tokens, finish reason, deployment name.
   - **Spike first (≤ 1 h):** confirm Microsoft's current recommended .NET client for Foundry Models with Entra ID. Known-good fallback, tested 2026-10-16: `POST https://proj-portfolio-slm-resource.services.ai.azure.com/models/chat/completions?api-version=2024-05-01-preview`, `model` = deployment name, bearer token for scope `https://cognitiveservices.azure.com/.default`. If the chosen SDK supports `IChatClient` (Microsoft.Extensions.AI), implement `IAnswerModel` on top of it.
   - Settings: `Foundry__Endpoint`, `Foundry__Deployment`, `Foundry__MaxTokens` (400), `Foundry__Temperature` (0.2), `Foundry__TimeoutSeconds` (20). Credential: `DefaultAzureCredential` (managed identity in Azure, your `az login` locally).
@@ -184,8 +186,12 @@ scripts/
 
 ## Phase 4: tune and launch (≈ 0.5–1 day)
 
-- [ ] **4.1 Prompt tuning loop:** change `system-prompt.md`, run the evals, read the failures, repeat. Each run's results file is committed, so the history of what helped is visible.
-- [ ] **4.2 Model decision.** If Phi-4-mini meets the bar (trap, privacy, jailbreak and sensitive 100%, overall ≥ 90%), keep it. If it doesn't after reasonable tuning, deploy one or two mid-size models in the same Foundry resource (projected cost ≤ $3/month at 1k questions, so about ≤ $0.50 per million input tokens; check what's available in East US 2 as GlobalStandard), run the evals, choose one, and change `Foundry__Deployment`. Large models are out of scope. If a mid-size model is chosen, lower `Limits__GlobalPerDay` to about 100. Record the decision and its numbers in `llm-assistant-plan.md`.
+- [x] **4.1 Prompt tuning loop:** change `system-prompt.md`, run the evals, read the failures, repeat. Each run's results file is committed, so the history of what helped is visible.
+  - **Accepted 2026-10-20 as good enough to launch on** (your call): the last full run, 323/335 on prompt `5b0f371dd542`, has no invented facts, private details or stances. Its launch-bar misses are runner timeouts, one grader false positive and one invalid link ID, each in a single run. Revisit with the logs after the soft launch (4.8).
+  - 15 tuning rounds (2 on Phi-4-mini, 13 on Haiku), summarized with what worked and what didn't in [model-evaluation.md](model-evaluation.md).
+- [x] **4.2 Model decision.** If Phi-4-mini meets the bar (trap, privacy, jailbreak and sensitive 100%, overall ≥ 90%), keep it. If it doesn't after reasonable tuning, deploy one or two mid-size models in the same Foundry resource (projected cost ≤ $3/month at 1k questions, so about ≤ $0.50 per million input tokens; check what's available in East US 2 as GlobalStandard), run the evals, choose one, and change `Foundry__Deployment`. Large models are out of scope. If a mid-size model is chosen, lower `Limits__GlobalPerDay` to about 100. Record the decision and its numbers in `llm-assistant-plan.md`.
+  - Phi-4-mini, gpt-4.1-mini and Claude Haiku 5.5 compared on 24 cases; summary in [model-evaluation.md](model-evaluation.md).
+  - **Decided 2026-10-19: Claude Haiku 5.5** (`claude-haiku-5-5`). It is the eval runner's default (the `--chat-completions` path for Phi and GPT was removed on 2026-10-20). The `AZ-400 certif` fabrication pattern now allows "certification exam". Full baseline in 0.9: 81%, so tuning (4.1) continues on Haiku.
 - [ ] **4.3 FAQ fallback check.** If no model clears the bar, stop and ship `faq.md` as a plain page section instead.
 - [ ] **4.4 Turn off key auth on Foundry** (You approve): `az resource update --ids <foundry account id> --set properties.disableLocalAuth=true`. Then rerun the smoke test and one eval run.
 - [ ] **4.5 Delete the old Jules resources** (You approve; permanent):

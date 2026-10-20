@@ -1,6 +1,8 @@
 ﻿using System.Text.Json;
+using Azure.Identity;
 using Portfolio.Assistant.Core;
 using Portfolio.Assistant.Evals;
+using Portfolio.Assistant.Foundry;
 
 // Runs api/evals/questions.jsonl against a model and writes a report to api/evals/results/.
 // Exit codes: 0 launch bar met, 1 not met, 2 bad options or setup.
@@ -23,14 +25,14 @@ if (api is null)
     return 2;
 }
 
-if (!options.SelfTest)
+var (knowledge, cases) = LoadInputs(api, options);
+var model = CreateModel(options, cases);
+if (model is null)
 {
-    Console.Error.WriteLine("The Foundry client is task 1.4 and isn't built yet. Until then, run with --self-test.");
+    Console.Error.WriteLine("Set FOUNDRY_ENDPOINT to the Foundry resource's address (https://<resource>.services.ai.azure.com), or run with --self-test.");
     return 2;
 }
 
-var (knowledge, cases) = LoadInputs(api, options);
-IAnswerModel model = new PassExampleModel(cases);
 using var cancellation = new CancellationTokenSource();
 Console.CancelKeyPress += (_, press) =>
 {
@@ -40,13 +42,11 @@ Console.CancelKeyPress += (_, press) =>
 
 Console.WriteLine($"Running {cases.Count} cases × {options.Runs} runs against {model.Deployment} (prompt {knowledge.PromptVersion})...");
 var grader = new Grader(knowledge.Links.Select(link => link.Id).ToHashSet());
-var results = await new EvalRunner(model, knowledge, grader).RunAsync(cases, options.Runs, options.Parallelism, cancellation.Token);
+var results = await new EvalRunner(model, knowledge, grader, Console.Out).RunAsync(cases, options.Runs, options.Parallelism, cancellation.Token);
 var bar = LaunchBar.Evaluate(results);
 
 var context = new ReportContext(TimeProvider.System.GetUtcNow(), model.Deployment, knowledge.PromptVersion, options.Runs);
-// self-test reports go to one git-ignored file so they don't pile up next to real results
-var reportName = options.SelfTest ? "self-test.md" : ReportWriter.FileName(context);
-var reportPath = WriteReport(api, reportName, ReportWriter.Write(results, bar, context));
+var reportPath = WriteReport(Path.Combine(api, "evals", "results"), options.SelfTest, context, ReportWriter.Write(results, bar, context));
 
 Console.WriteLine($"{results.Count(result => result.Passed)} / {results.Count} cases passed. Launch bar {(bar.Met ? "met" : "not met")}.");
 Console.WriteLine($"Report: {Path.GetRelativePath(Directory.GetCurrentDirectory(), reportPath)}");
@@ -66,10 +66,30 @@ static (KnowledgeBase Knowledge, List<EvalCase> Cases) LoadInputs(string api, Ev
     return (knowledge, cases);
 }
 
-static string WriteReport(string api, string fileName, string report)
+// real runs sign in as your az login, which azure/login also sets up in CI; DefaultAzureCredential picked up a
+// different signed-in account (401). The endpoint comes from the environment so it stays out of the repo
+static IAnswerModel? CreateModel(EvalOptions options, IReadOnlyList<EvalCase> cases)
 {
-    var folder = Path.Combine(api, "evals", "results");
+    if (options.SelfTest)
+    {
+        return new PassExampleModel(cases);
+    }
+
+    var endpoint = Environment.GetEnvironmentVariable("FOUNDRY_ENDPOINT");
+    if (!Uri.TryCreate(endpoint, UriKind.Absolute, out var uri))
+    {
+        return null;
+    }
+
+    // a full run hits the deployment's rate limit constantly, so allow more retries than a visitor's request would get
+    return ClaudeAnswerModel.ForFoundry(uri, options.Deployment, new AzureCliCredential(), maxRetries: 7);
+}
+
+// self-test reports go to one git-ignored file so they don't pile up next to real results; real reports are never replaced
+static string WriteReport(string folder, bool selfTest, ReportContext context, string report)
+{
     Directory.CreateDirectory(folder);
+    var fileName = selfTest ? "self-test.md" : ReportWriter.UnusedFileName(ReportWriter.FileName(context), name => File.Exists(Path.Combine(folder, name)));
     var path = Path.Combine(folder, fileName);
     File.WriteAllText(path, report);
     return path;
