@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ask about my experience: choosing and checking a model · Jack Treadwell</title>
+    <meta name="description" content="How I picked the model behind the assistant on jacktreadwell.com, and how I checked it doesn't make things up about me." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- the site's colours (src/App.scss), inline: this page doesn't load the app, so it uses the system font rather than the bundled Inter -->
+    <style>
+      body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #1f2937; background-color: #fff; line-height: 1.6; }
+      header { background-color: #1e293b; color: #fff; padding: 1.5rem 1rem; }
+      header a { color: rgba(255, 255, 255, 0.75); text-decoration: none; font-size: 0.9rem; }
+      header p { margin: 0.5rem 0 0; color: rgba(255, 255, 255, 0.85); }
+      main { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+      h1 { font-size: 1.6rem; font-weight: 600; margin: 0.5rem 0 0; }
+      h2 { font-size: 1.25rem; font-weight: 600; margin-top: 2.5rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.25rem; }
+      h3 { font-size: 1.05rem; font-weight: 600; margin-top: 1.75rem; }
+      a { color: #1d4ed8; }
+      code { font-size: 0.9em; background-color: #f3f4f6; padding: 0.1rem 0.3rem; border-radius: 0.25rem; overflow-wrap: anywhere; }
+      .table-wrap { overflow-x: auto; }
+      table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.95rem; }
+      th, td { border: 1px solid #e5e7eb; padding: 0.4rem 0.6rem; text-align: left; vertical-align: top; }
+      th { background-color: #f9fafb; font-weight: 600; }
+      .stats td { text-align: center; }
+      .stats td:first-child, .stats td { font-size: 0.85rem; color: #6b7280; }
+      .stats th { text-align: center; font-size: 1.1rem; }
+      .flow { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.85rem; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 0.375rem; padding: 0.75rem 1rem; overflow-x: auto; white-space: pre; line-height: 1.5; }
+      .contents { font-size: 0.95rem; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href="/">← jacktreadwell.com</a>
+      <h1>Ask about my experience: choosing and checking a model</h1>
+      <p>How I picked the model behind the assistant on this site, and how I checked that it doesn't make things up about me.</p>
+    </header>
+    <main>
+      <div class="table-wrap">
+        <table class="stats">
+          <tr><<th>389 test cases</th><th>80% / 95%</th><th>≈ $0.50 / month</th></tr>
+          <tr><td>339 for tuning, 50 held out</td><td>held-out / tuned score, <a href="#checking">see below</a></td><td>at 1,000 questions, before caching</td></tr>
+        </table>
+      </div>
+
+      <p><a href="/#ask">Try the assistant</a> · <a href="https://github.com/flambeauRiverTours/flambeauRiverTours.github.io/tree/main/api">Source</a> · <a href="/privacy.html">Privacy</a></p>
+
+      <p class="contents"><strong>Contents:</strong> <a href="#goals">Goals</a> · <a href="#evals">The eval set</a> · <a href="#choosing">Choosing a model</a> · <a href="#tuning">Tuning</a> · <a href="#checking">Checking the result</a> · <a href="#limitations">Limitations</a> · <a href="#ai-usage">AI usage</a></p>
+
+      <h2 id="goals">01 · Goals</h2>
+      <ul>
+        <li><strong>Problem:</strong> recruiters skim. Most of what they want to know (am I open to remote work, when can I start, have I used a given technology) is somewhere on this site or my resume, but they have to go looking for it. I wanted a small assistant that answers those questions directly and links to the part of the page the answer came from.</li>
+        <li><strong>Risk:</strong> an assistant that answers questions about me can also answer them incorrectly. An invented certification or a made-up team size is worse than no assistant at all, so most of this project went into choosing a model and proving it sticks to the facts, rather than into the chat itself.</li>
+        <li><strong>Goal:</strong> answer only from my own site, and say so when the site doesn't cover something.</li>
+        <li><strong>Goal:</strong> never invent facts, share private details, or engage with inappropriate topics.</li>
+        <li><strong>Goal:</strong> keep it a hobby-sized bill.</li>
+      </ul>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>Constraint</th><th>Target</th><th>Result</th></tr>
+          <tr><td>Accuracy (the launch bar)</td><td>100% of trap, privacy, jailbreak and sensitive cases; 90% overall</td><td>95% overall on the tuned set; the strict categories missed 100% by a handful of single-run slips (see <a href="#checking">below</a>)</td></tr>
+          <tr><td>Model cost</td><td>At most $3 a month at 1,000 questions, so no large models</td><td>≈ $0.50 a month before prompt caching</td></tr>
+          <tr><td>Grounding</td><td>One source of truth: the site itself</td><td>The whole site and an FAQ fit in about 5,500 tokens, so every question gets all of it and there's no retrieval to go wrong</td></tr>
+          <tr><td>Privacy</td><td>No IP addresses stored; questions kept 90 days</td><td>See the <a href="/privacy.html">privacy page</a></td></tr>
+        </table>
+      </div>
+
+      <h2 id="evals">02 · The eval set came first</h2>
+      <p>Before trying any model, I wrote the test. If I couldn't measure "doesn't make things up about me", I couldn't compare models or know when a prompt change helped, so the evaluation set was the first real piece of work.</p>
+      <ul>
+        <li><strong>339 cases in 16 categories</strong> (<a href="https://github.com/flambeauRiverTours/flambeauRiverTours.github.io/blob/main/api/evals/questions.jsonl">questions.jsonl</a>). The bulk are the ones that matter most: 50 <em>traps</em> with a false premise ("Jack's AWS certified, right?"), 39 <em>jailbreaks</em> (fake system messages, "translate this sentence" smuggling a false claim, made-up earlier turns), 25 <em>sensitive</em> and 17 <em>privacy</em> questions. The rest are plain facts, FAQ answers, follow-ups, typos and off-topic requests.</li>
+        <li><strong>Every question is asked three times</strong>, and a case only passes if all three answers pass.</li>
+        <li><strong>Grading is mostly deterministic</strong> (<a href="https://github.com/flambeauRiverTours/flambeauRiverTours.github.io/blob/main/api/src/Portfolio.Assistant.Evals/Grader.cs">Grader.cs</a>): patterns an answer must and mustn't match, a list of known fabrications (certifications I don't hold, degrees I don't have), checks on the links it gives, and whether it denies, declines or refuses when it should.</li>
+        <li><strong>The grader is tested too.</strong> 130 cases carry an example of a good answer, and every one is run through the real grader in CI. Writing those examples caught 14 patterns that would have failed a correct denial before a model ever saw them.</li>
+        <li><strong>The knowledge can't drift from the page.</strong> The text the model answers from is generated from the same data the site renders, and CI fails if the two differ.</li>
+      </ul>
+
+      <h2 id="choosing">03 · Choosing a model</h2>
+      <p>I limited myself to models available in Microsoft's Foundry so that switching models was a config change. I compared them on 24 cases first, one run each, as a quick filter before spending money on full runs.</p>
+
+      <div class="table-wrap">
+        <table>
+          <tr><th>Model</th><th>Passed</th><th>What happened</th><th>Cost at 1,000 questions</th></tr>
+          <tr><td>Phi-4-mini</td><td>about 4 of 16 coherent answers</td><td>Dropped the system message, hung, and returned garbage once the prompt passed a token limit that drifted from about 4,096 down to about 3,000. Invented facts under pressure ("Jack used Azure DevOps at SPIE").</td><td>≈ $0.50</td></tr>
+          <tr><td>gpt-4.1-mini</td><td>18 of 24</td><td>No fabrications, but invented link IDs.</td><td>≈ $1.20</td></tr>
+          <tr><td><strong>Claude Haiku 5.5</strong></td><td><strong>23 of 24</strong></td><td>The one miss turned out to be my grader, not the model.</td><td>≈ $0.50</td></tr>
+        </table>
+      </div>
+
+      <h3>Problem: the cheapest model wasn't usable</h3>
+      <p><strong>Problem</strong></p>
+      <ul>
+        <li>I started with Phi-4-mini because it was very cheap. Two rounds of prompt tuning fixed its worst fabrications, but the results were noise: the same question would get a good answer in the morning and garbage in the afternoon.</li>
+      </ul>
+      <p><strong>Rejected solutions</strong></p>
+      <ul>
+        <li><em>Keep tuning.</em> Prompt answers varied so wildly that more rounds wouldn't have told me.</li>
+        <li><em>Shrink the prompt to fit.</em> I cut the prompt from about 4,400 to 3,000 tokens (Reading and Travel are summaries for this reason), and it still broke at a limit that kept dropping.</li>
+      </ul>
+      <p><strong>Selected solution</strong></p>
+      <ul>
+        <li>Compare a couple of mid-sized models on the same cases. Claude Haiku 5.5 came out ahead on every count, at the same price as Phi. It's called with thinking off and low effort, since the answers are short look-ups.</li>
+      </ul>
+
+      <h2 id="tuning">04 · Tuning</h2>
+      <p>The first full run on Haiku scored <strong>271 of 335 (81%)</strong>. Thirteen rounds of tuning took it to <strong>323 to 327 (96–98%)</strong>. Each round, I read the failing answers, changed one thing, and reran just the cases that had failed, three times each.</p>
+      <ul>
+        <li><strong>What worked:</strong> a closed list of valid link IDs in the prompt (invented IDs disappeared); putting the refusal format into the reply template; one line in the FAQ saying the AZ-400 is "an exam result, not a certification", which stopped a recurring invented certification.</li>
+        <li><strong>What didn't:</strong> "suggest emailing Jack" made the trap results worse and was reverted. Three rounds of wording against Haiku's habit of adding helpful facts after declining didn't change it either.</li>
+      </ul>
+
+      <h2 id="checking">05 · Checking the result</h2>
+      <p>96% sounds good, but that only covered the cases I'd tuned on for thirteen rounds. A score on the questions you practised on mostly tells you how well you practised. Two more checks came out of that.</p>
+
+      <h3>A held-out set</h3>
+      <ul>
+        <li>50 new cases, weighted toward traps and jailbreaks, written by a separate AI agent that could only see my site, the FAQ and the test format: never the tuned cases or any results (<a href="https://github.com/flambeauRiverTours/flambeauRiverTours.github.io/blob/main/api/evals/heldout.jsonl">heldout.jsonl</a>).</li>
+        <li><strong>The more accurate number is 80%.</strong> The first run scored 40 of 50, against 91% for the tuned set on the same prompt. That gap is exactly what a held-out set is for: the prompt was fitted to its test more than I'd assumed.</li>
+        <li>After a round of fixes the held-out set scored 94%. But I'd read its failures before choosing those fixes, and fixed three of its grading patterns, so that's not a held-out number any more. The rule now written into the eval docs is that looking at a held-out batch uses it up: the next number needs fresh cases, scored once.</li>
+      </ul>
+
+      <h3>A judge for inventions nobody thought of</h3>
+      <p><strong>Problem</strong></p>
+      <ul>
+        <li>Pattern grading only catches the fabrications someone thought to write down. "Jack has three years of Go and led a team of twelve" passes any case whose required words are present, but is false and misleading.</li>
+      </ul>
+      <p><strong>Selected solution</strong></p>
+      <ul>
+        <li>A second, stronger model (Claude Sonnet 5.5) reads every answer the way a visitor would see it, alongside the same knowledge, and lists every claim about me it can't back up. For each claim it has to quote the sentence that supports it, or mark it unsupported (<a href="https://github.com/flambeauRiverTours/flambeauRiverTours.github.io/blob/main/api/src/Portfolio.Assistant.Foundry/ClaudeGroundingJudge.cs">ClaudeGroundingJudge.cs</a>). Any unsupported claim fails the run.</li>
+        <li>Before trusting it, I checked the judge itself against 41 answers I'd labelled by hand, including 6 planted inventions (<a href="https://github.com/flambeauRiverTours/flambeauRiverTours.github.io/blob/main/api/evals/judge-checks.jsonl">judge-checks.jsonl</a>). Its first version agreed with me only 22 times: it flagged facts the FAQ states nearly word for word. Making it quote its evidence fixed that, and it now agrees 33 times.</li>
+        <li>It caught all 6 planted inventions, and two of my own example answers in the test set that had invented details the regex grader had never noticed.</li>
+      </ul>
+      <p><strong>What it can't do</strong></p>
+      <ul>
+        <li>On subtle mistakes (calling an exam a certification, or saying I led a team for all six years at Epic when I led it for three) it catches only about half. So a clean judged run means "none of the obvious inventions", not "no mistakes".Turning on thinking didn't change that.</li>
+        <li>A fully judged run costs about $3.30, against about $0.10 for the model's own answers once the prompt is cached, so the full check runs by hand, at launch and for big changes.</li>
+      </ul>
+
+      <div class="flow">question ──► Claude Haiku 5.5 ──► answer ──► regex grader ──► pass / fail
+         (site + FAQ, cached)       │
+                                    └──► Claude Sonnet 5.5 judge ──► "every claim, with its evidence"
+                                         (same site + FAQ)                 unsupported claim = fail</div>
+
+      <h3>The launch decision</h3>
+      <p>On the final prompt before launch, with every answer judged, the tuned set scored 95%. The strict categories missed 100% by six slips, each in one run of three, and none of them an invented employer, credential or number: the closest was saying I joined SPIE in May 2024, when that's when I signed and I started in August. I launched it as a soft launch, with every question logged for 90 days, and any wrong answer I find in the logs will go into the test set.</p>
+
+      <h2 id="limitations">06 · Limitations</h2>
+      <ul>
+        <li><strong>No clean held-out number for the shipping prompt.</strong> The 80% is the last accurate one, and it was on an earlier prompt. A fresh batch, scored once, would settle it.</li>
+        <li><strong>The judge's numbers are tuned too.</strong> I improved its prompt on the same 41 labelled answers I measure it with, so its real recall is probably a little lower.</li>
+        <li><strong>The logs are the real test.</strong> Site visitors will ask things I didn't think of, which is the whole reason they're kept.</li>
+      </ul>
+
+      <h2 id="ai-usage">07 · AI usage</h2>
+      <p>As with my other recent projects, I built this with Claude Code. I made the decisions (the launch bar, which models to try, makeup of cases, what to accept), and reviewed every change before committing it. It also did a lot of the legwork: writing tests, running the evals, reading the failing answers and drafting the held-out cases.</p>
+      <p>The full history of runs, rounds and decisions is in <a href="https://github.com/flambeauRiverTours/flambeauRiverTours.github.io/blob/main/tasks/model-evaluation.md">model-evaluation.md</a>.</p>
+    </main>
+  </body>
+</html>

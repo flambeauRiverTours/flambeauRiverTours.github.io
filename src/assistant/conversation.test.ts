@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { announcementFor, conversationReducer, historyFor, maxMessageLength, Turn, waitText } from "./conversation";
+import { announcementFor, conversationReducer, historyFor, isNearBottom, maxMessageLength, Turn, waitText } from "./conversation";
 
 const spie = { id: "experience-spie", label: "Experience › SPIE" };
 
@@ -72,6 +72,21 @@ describe("announcementFor", () => {
         ["the outage", [{ question: "Q?", state: "unavailable" }], "The assistant is unavailable right now."],
     ])("announces %s", (_, turns, announcement) => {
         expect(announcementFor(turns)).toBe(announcement);
+    });
+});
+
+//a new turn is followed only by a visitor already at the end; one scrolled up to reread isn't pulled away
+describe("isNearBottom", () => {
+    it.each([
+        ["at the very bottom", 600, true],
+        ["a little above it", 540, true],
+        ["scrolled up to reread", 300, false],
+    ])("is %s", (_, scrollTop, near) => {
+        expect(isNearBottom({ scrollTop, clientHeight: 400, scrollHeight: 1000 })).toBe(near);
+    });
+
+    it("counts a conversation that doesn't fill its space as at the bottom", () => {
+        expect(isNearBottom({ scrollTop: 0, clientHeight: 400, scrollHeight: 300 })).toBe(true);
     });
 });
 

@@ -1,0 +1,61 @@
+# Eval run: 2026-10-21 18:06 UTC, claude-haiku-5-5
+
+- Prompt version: `fa46f02d1502`
+- Cases: the tuned set (`questions.jsonl`)
+- 115 cases × 3 runs; a case passes only if every run passes
+- **Launch bar: met**: overall 98% (needs 90%) (each needs 100%)
+
+## Pass rate by category
+
+| Category | Passed | Rate |
+|---|---|---|
+| fact | 39 / 39 | 100% |
+| faq | 57 / 59 | 97% |
+| links | 8 / 8 | 100% |
+| meta | 9 / 9 | 100% |
+
+## Links
+
+- Expected links present: 114 / 117 runs
+- Extra links per answer: 0.2
+- Refusals with links: 0
+- Blocked by the content filter: 0 runs
+
+## Tokens and cost
+
+- 1,992,435 input (1,980,064 read from the cache, 5,756 written to it) + 26,809 output tokens
+- About $0.03 at the assumed prices ($0.10 / $0.50 per million tokens)
+
+## Failures (2)
+
+### interview-wednesday (faq, expect deny)
+
+Question: Can we interview Jack on a Wednesday?
+
+Note: Wednesday isn't one of the listed days. A good answer lists the days and suggests emailing Jack.
+
+Run 1: expected deny: the first sentence isn't negative
+
+> Jack can interview on Monday, Tuesday, Thursday or Friday afternoons in Berlin, with a few days' notice, which are morning slots in US Eastern Time. Wednesday isn't listed as an available day on his site, so please email him at jack.treadwell.dev@gmail.com to ask about a Wednesday time.
+> Links: none
+
+Run 2: expected deny: the first sentence isn't negative
+
+> Jack can interview on Monday, Tuesday, Thursday or Friday afternoons in Berlin, with a few days' notice, which are morning slots in US Eastern Time. Wednesday isn't listed as an available day on the site, so please email jack.treadwell.dev@gmail.com to ask about a Wednesday slot.
+> Links: none
+
+Run 3: expected deny: the first sentence isn't negative
+
+> Jack can interview on Monday, Tuesday, Thursday or Friday afternoons in Berlin, with a few days' notice. Wednesday isn't listed on the site, so please email jack.treadwell.dev@gmail.com to ask about it.
+> Links: none
+
+### logi-commute-atlanta (faq, expect deny)
+
+Question: Our office is in Atlanta and we're hybrid two days a week. Would that work for Jack?
+
+Run 3: expected deny: the first sentence isn't negative
+
+> Jack is open to on-site or hybrid work in the Charlotte area, or fully remote anywhere in the US. He won't relocate elsewhere or commute to other cities such as Raleigh, so an Atlanta office isn't something the site says he'd take. He's relocating to Charlotte in January 2027, so please email him at jack.treadwell.dev@gmail.com to discuss it.
+> 
+> Links: none
+

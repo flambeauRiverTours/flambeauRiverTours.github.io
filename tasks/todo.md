@@ -151,7 +151,31 @@ Design, risks and decisions: `tasks/llm-assistant-plan.md`. Eval history: `tasks
     - Reports: `api/evals/results/2026-10-21-claude-haiku-5-5-3479c80c4da0-heldout.md` and `…-3479c80c4da0.md`.
   - [ ] Browser check at both widths against the live API (only possible on `jacktreadwell.com`: CORS allows only the live origins).
   - Read the logs daily for the first week, then weekly; add every wrong answer to `questions.jsonl`.
-- [ ] **4.9 Write-up** (optional): a short "how I built it" for the Projects section (model chosen by evals, cost caps, privacy)
+- [x] **Both drawer fixes built (2026-10-21, uncommitted).** Tests first (10 new, plus 3 guards seen failing with their guard removed); site tests, lint and build pass.
+  - **Scrolling:** only `.conversation` scrolls. Where the visitor is is read just before each turn changes, not from scroll events, because a smooth scroll fires them mid-way. The area is a named region, focusable once it overflows.
+  - **Focus:** returns to the input after an answer, the rate limit or an outage. Not when the drawer has closed, and not on a touch screen (`pointer: coarse`), so the keyboard doesn't cover the answer: the phone question, decided.
+  - **Browser check:** at 1280 px and on the mobile preset, only the conversation scrolled and the input and notice stayed in view, with no sideways scroll. It followed from the bottom and stayed put when scrolled up. Focus came back on desktop but not on touch. At 375×450, standing in for an open keyboard, the conversation shrank to 155 px with the input in view.
+  - **Not verified:** the smooth animation (the hidden browser pane gets no animation frames, so the check used the instant, reduced-motion path) and a real phone keyboard. Check both on a phone after deploying.
+  - The jsdom helper is renamed `stubJsdomGaps`, since it now also stubs `Element.scrollTo`.
+- [x] ~~Drawer: scroll the conversation, not the whole drawer~~ (found after launch, 2026-10-21). After several questions the whole `Offcanvas.Body` scrolls, so the input box and the notice scroll out of view with the conversation.
+  - Only `.conversation` scrolls (`flex: 1; min-height: 0; overflow-y: auto` inside the flex column). The header, the input row and the notice stay fixed.
+  - Each new question and reply scrolls into view smoothly, but only if the visitor was already near the bottom. Someone scrolled up to reread an answer isn't pulled down. Honour `prefers-reduced-motion` (jump instead of animate).
+  - Keyboard and screen readers keep working: the scroll area is focusable when it overflows, and the single `role="status"` announcement is unchanged.
+  - **Done when:** a test covers the scroll-to-latest rule, and the browser check shows the input fixed after many turns at both widths, including a phone keyboard open over the drawer.
+- [x] ~~Drawer: put focus back in "Type your question…" after each reply~~ (found after launch, 2026-10-21). The input is `disabled` while waiting, so the browser drops its focus and the visitor has to click back in before the next question.
+  - When the reply arrives (answer, rate limit or unavailable), focus the input again. Do the same after a starter question or a link button sends one.
+  - Not when the drawer has closed in the meantime, and not on phones if it would pop the keyboard up over the answer they're about to read. Decide this in the browser at phone width.
+  - **Done when:** a test sends a question and finds the input focused after the reply, and the browser check confirms it at both widths.
+- [x] **4.9 Write-up** (2026-10-21, uncommitted, for your review: it speaks in your voice). Focused on model selection and validation, as asked.
+  - **The page:** `public/assistant-write-up.html`, about 1,900 words. It's a static page like `privacy.html`, laid out like the Fantasy Football write-up: a stats table, numbered sections, problem / rejected / selected, limitations and AI usage. Diagrams are plain text, since loading Mermaid from a CDN would break the no-third-party-requests rule.
+  - **What it says, honestly:**
+    - The model comparison and the tuning from 81% to 96–98%.
+    - The held-out set's clean 80%, and why the later 94% doesn't count.
+    - The judge's 33/41 agreement, with only about half the subtle claims caught.
+    - The launch decision.
+  - **The Projects entry:** `projects-assistant`, first in the list, with Write-up and Code links and an `#ask` link in its text.
+  - **Prompt changes:** the new anchor is in the system prompt's closed link list, with an eval case for it (`links-assistant`). The prompt budget went from 5,550 to 5,850 tokens; the prompt is now about 5,790. A regression check on links, meta, fact and FAQ scored 113/115, the same as before; the two failures are the known second-sentence denials. That cost about $0.03; the report is in `reruns/…-fa46f02d1502-4-categories.md`.
+  - **Checks:** a test keeps the page free of scripts, stylesheets and images from other sites, and makes it set its own colours. In the browser at 1280 px and on the mobile preset, it made no requests to other sites, had no sideways scroll and no broken in-page links.
 - **Done when:** the committed eval report meets the launch bar, key auth is off, the old resources are deleted, and CI is green.
 
 ## Needs your input or approval

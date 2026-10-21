@@ -32,6 +32,10 @@
     "label": "Projects"
   },
   {
+    "id": "projects-assistant",
+    "label": "Projects › AI Assistant: Ask About My Experience"
+  },
+  {
     "id": "projects-fantasy-football",
     "label": "Projects › Real-Time Fantasy Football Scoreboard"
   },

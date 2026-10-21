@@ -153,7 +153,9 @@ Adopted from the FantasyFootballWebsite repository's `docs/standards.md`, adapte
   - Colour contrast and target size are left to the browser check: jsdom has no layout
 - The reduced-motion preference turns motion off entirely (`App.scss`)
   - why: decorative motion has nothing worth keeping
-- Answers are announced through an `aria-live` region, and the drawer focuses its input on opening
+- Each reply is announced once through a `role="status"` region, and the drawer focuses its input on opening and again after each reply
+  - Except on a touch screen, where focusing would open the keyboard over the answer
+- Only the drawer's conversation scrolls, so the input and the notice stay in view; it follows new turns only for a visitor already at the end, and becomes keyboard-focusable once it overflows
 
 **Motion and performance**
 - Motion is decorative and never carries information

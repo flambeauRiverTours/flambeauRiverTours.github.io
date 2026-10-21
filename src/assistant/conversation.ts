@@ -48,6 +48,14 @@ export function historyFor(turns: Turn[]): HistoryMessage[] {
         ]);
 }
 
+//within this many pixels of the end still counts as at the end
+const nearBottomPixels = 80;
+
+/** Whether a scroll area is at, or close to, its end; one that doesn't overflow is always at its end */
+export function isNearBottom({ scrollTop, clientHeight, scrollHeight }: { scrollTop: number; clientHeight: number; scrollHeight: number }): boolean {
+    return scrollHeight - scrollTop - clientHeight <= nearBottomPixels;
+}
+
 /** What a screen reader hears for the latest reply: once per turn, never the visitor's own question or the waiting text */
 export function announcementFor(turns: Turn[]): string {
     const last = turns[turns.length - 1];
