@@ -19,3 +19,20 @@
         color: var(--bs-secondary-color);
     }
 }
+
+.headerActions{
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.askIcon{
+    display: flex;
+    padding: 0.5rem;
+    color: var(--bs-body-color);
+    border-radius: var(--bs-border-radius);
+
+    &:hover{
+        background-color: var(--bs-secondary-bg);
+    }
+}

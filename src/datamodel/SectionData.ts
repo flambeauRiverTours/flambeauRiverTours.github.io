@@ -10,6 +10,7 @@ export interface ISectionData{
 }
 
 export interface IBodyTextSection{
+    id?: string; //anchor id for linking straight to this entry, e.g. #experience-spie
     title: string;
     subtitle?: string; //secondary line under the title, e.g. company, location, and dates
     body: string | JSX.Element;
@@ -22,6 +23,12 @@ export interface IBodyTextSection{
 export interface ILink{
     label: string;
     href: string;
+}
+
+export interface IProfile{
+    name: string;
+    role: string; //headline role and focus, shown under the name
+    location: string; //where I live now and where I'm moving
 }
 
 export interface IHighlight{

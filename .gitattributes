@@ -1,0 +1,7 @@
+# The assistant API follows the FantasyFootball C# standards: .cs and project files are CRLF.
+# The repo stores LF; without this a Linux runner checks out LF and dotnet format fails ENDOFLINE.
+api/**/*.cs text eol=crlf
+api/**/*.csproj text eol=crlf
+api/**/*.props text eol=crlf
+api/**/*.slnx text eol=crlf
+api/.editorconfig text eol=crlf

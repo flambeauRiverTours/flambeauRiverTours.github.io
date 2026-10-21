@@ -1,0 +1,16 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "AzureWebJobsStorage": "",
+    "Foundry__Endpoint": "https://<resource>.services.ai.azure.com",
+    "Foundry__Deployment": "claude-haiku-5-5",
+    "Storage__ConnectionString": "UseDevelopmentStorage=true",
+    "Limits__PerMinute": "5",
+    "Limits__PerDay": "30",
+    "Limits__GlobalPerDay": "300"
+  },
+  "Host": {
+    "CORS": "http://localhost:5173"
+  }
+}

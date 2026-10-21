@@ -22,3 +22,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# .NET build output for the assistant API
+api/**/bin/
+api/**/obj/
+api/.vs/
+api/evals/results/self-test.md
+api/evals/results/judge-check.md
+# local Function settings hold the real Foundry address; the example is committed
+api/**/local.settings.json
+
+# Azurite data from running the API locally
+.azurite/

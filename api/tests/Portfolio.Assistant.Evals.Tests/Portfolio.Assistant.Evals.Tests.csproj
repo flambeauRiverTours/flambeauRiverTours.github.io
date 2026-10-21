@@ -1,0 +1,34 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <OutputType>Exe</OutputType>
+    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
+    <!-- a test's name is its documentation: a sentence about behaviour -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions" Version="7.2.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+    <PackageReference Include="xunit.v3" Version="4.0.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- the real eval set and link list, so the grader is checked against every passExample -->
+    <Content Include="..\..\evals\questions.jsonl" Link="data\questions.jsonl" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\evals\heldout.jsonl" Link="data\heldout.jsonl" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\evals\judge-checks.jsonl" Link="data\judge-checks.jsonl" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\knowledge\links.json" Link="data\links.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Portfolio.Assistant.Evals\Portfolio.Assistant.Evals.csproj" />
+  </ItemGroup>
+
+</Project>
