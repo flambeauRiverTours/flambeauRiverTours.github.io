@@ -1,14 +1,8 @@
 name: ci
-# the site's checks: on every pull request, and called by deploy.yml so a red build never reaches Pages
+# the site's checks: on every pull request, and called by deploy.yml so a red build never reaches Pages.
+# No path filter: main's ruleset requires this check, and a filtered-out run would never report.
 on:
   pull_request:
-    # later patterns win: the knowledge files are Markdown, but the drift check covers them
-    paths:
-      - '**'
-      - '!docs/**'
-      - '!tasks/**'
-      - '!**/*.md'
-      - 'api/knowledge/**'
   workflow_call:
 
 permissions:
