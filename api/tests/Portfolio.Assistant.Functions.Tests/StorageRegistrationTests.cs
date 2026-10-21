@@ -33,6 +33,16 @@ namespace Portfolio.Assistant.Functions.Tests
             services.GetRequiredService<IDailyCountStore>().Should().BeOfType<BlobDailyCountStore>();
         }
 
+        // Azure.Core's defaults (100 s an attempt, 3 retries) could hold a visitor's request, and the rate limiter's lock, for minutes
+        [Fact]
+        public void Storage_calls_give_up_within_seconds()
+        {
+            var retry = ServiceCollectionExtensions.StorageClientOptions().Retry;
+
+            retry.NetworkTimeout.Should().BeLessThanOrEqualTo(TimeSpan.FromSeconds(3));
+            retry.MaxRetries.Should().BeLessThanOrEqualTo(1);
+        }
+
         public static TheoryData<(string, string)[]> NeitherOrBoth => new()
         {
             Array.Empty<(string, string)>(),

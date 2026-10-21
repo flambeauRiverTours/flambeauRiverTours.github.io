@@ -54,7 +54,7 @@ namespace Portfolio.Assistant.Functions
                 return new AskOutcome.Invalid(invalid.Detail);
             }
 
-            var decision = await AdmitAsync(VisitorAddress.Of(request));
+            var decision = await AdmitAsync(VisitorAddress.Of(request), cancellationToken);
             if (decision is null)
             {
                 return new AskOutcome.CountFailed();
@@ -82,14 +82,15 @@ namespace Portfolio.Assistant.Functions
             }
         }
 
-        // the global count is the cost control, so a failure to read or save it turns the question away (null)
-        private async Task<RateLimitDecision?> AdmitAsync(string visitorAddress)
+        // the global count is the cost control, so a failure or timeout reading or saving it turns the question away (null);
+        // the visitor leaving propagates, to the 499 with nothing counted or logged
+        private async Task<RateLimitDecision?> AdmitAsync(string visitorAddress, CancellationToken cancellationToken)
         {
             try
             {
-                return await rateLimiter.AdmitAsync(visitorAddress);
+                return await rateLimiter.AdmitAsync(visitorAddress, cancellationToken);
             }
-            catch (Exception error)
+            catch (Exception error) when (!cancellationToken.IsCancellationRequested)
             {
                 logger.LogError(error, "The global question count couldn't be read or saved, so the question was turned away");
                 return null;

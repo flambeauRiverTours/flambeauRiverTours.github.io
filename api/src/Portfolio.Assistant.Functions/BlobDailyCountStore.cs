@@ -14,11 +14,11 @@ namespace Portfolio.Assistant.Functions
         private bool containerChecked;
 
         /// <inheritdoc />
-        public async Task<DailyCount> ReadAsync(DateOnly day)
+        public async Task<DailyCount> ReadAsync(DateOnly day, CancellationToken cancellationToken)
         {
             try
             {
-                var content = await Blob(day).DownloadContentAsync();
+                var content = await Blob(day).DownloadContentAsync(cancellationToken);
                 return new DailyCount(int.Parse(content.Value.Content.ToString(), CultureInfo.InvariantCulture), content.Value.Details.ETag.ToString());
             }
             catch (RequestFailedException error) when (error.Status == 404)
@@ -28,12 +28,12 @@ namespace Portfolio.Assistant.Functions
         }
 
         /// <inheritdoc />
-        public async Task<DailyCount?> TryWriteAsync(DateOnly day, int count, string? expectedVersion)
+        public async Task<DailyCount?> TryWriteAsync(DateOnly day, int count, string? expectedVersion, CancellationToken cancellationToken)
         {
             if (!containerChecked)
             {
                 // the container is there in Azure; this creates it in a fresh Azurite
-                await container.CreateIfNotExistsAsync();
+                await container.CreateIfNotExistsAsync(cancellationToken: cancellationToken);
                 containerChecked = true;
             }
 
@@ -42,7 +42,7 @@ namespace Portfolio.Assistant.Functions
                 : new BlobRequestConditions { IfMatch = new ETag(expectedVersion) };
             try
             {
-                var written = await Blob(day).UploadAsync(BinaryData.FromString(count.ToString(CultureInfo.InvariantCulture)), new BlobUploadOptions { Conditions = conditions });
+                var written = await Blob(day).UploadAsync(BinaryData.FromString(count.ToString(CultureInfo.InvariantCulture)), new BlobUploadOptions { Conditions = conditions }, cancellationToken);
                 return new DailyCount(count, written.Value.ETag.ToString());
             }
             catch (RequestFailedException error) when (error.Status is 409 or 412)

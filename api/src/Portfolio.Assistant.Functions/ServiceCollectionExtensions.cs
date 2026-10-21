@@ -10,6 +10,9 @@ namespace Portfolio.Assistant.Functions
     /// <summary>Registers the Function's own services.</summary>
     internal static class ServiceCollectionExtensions
     {
+        // well inside the drawer's 35 s wait, and a few storage attempts with StorageClientOptions' 3 s timeout
+        private static readonly TimeSpan AdmitDeadline = TimeSpan.FromSeconds(5);
+
         /// <summary>Loads the knowledge files now and shares them as one <see cref="KnowledgeBase"/>.</summary>
         /// <param name="folder">Holds <c>system-prompt.md</c>, <c>site.md</c>, <c>faq.md</c> and <c>links.json</c>.</param>
         /// <remarks>Loading here rather than on first use makes a bad file stop the app starting instead of failing every question.</remarks>
@@ -29,8 +32,15 @@ namespace Portfolio.Assistant.Functions
                 new BlobDailyCountStore(provider.GetRequiredService<BlobServiceClient>().GetBlobContainerClient(BlobDailyCountStore.ContainerName)));
 
             return services.AddSingleton(provider => new RateLimiter(
-                provider.GetRequiredService<IOptions<RateLimits>>().Value, provider.GetRequiredService<TimeProvider>(), provider.GetRequiredService<IDailyCountStore>()));
+                provider.GetRequiredService<IOptions<RateLimits>>().Value, provider.GetRequiredService<TimeProvider>(), provider.GetRequiredService<IDailyCountStore>(), AdmitDeadline));
         }
+
+        /// <summary>Storage calls that give up within seconds, for the question log and the global count.</summary>
+        /// <remarks>Azure.Core's defaults (100 s an attempt, 3 retries) could hold a visitor, and the rate limiter's lock, for minutes.</remarks>
+        public static BlobClientOptions StorageClientOptions() => new()
+        {
+            Retry = { NetworkTimeout = TimeSpan.FromSeconds(3), MaxRetries = 1, Delay = TimeSpan.FromMilliseconds(200) },
+        };
 
         /// <summary>Registers <see cref="BlobQuestionLog"/> in <see cref="AddStorage"/>'s account.</summary>
         public static IServiceCollection AddQuestionLog(this IServiceCollection services) =>
@@ -51,7 +61,9 @@ namespace Portfolio.Assistant.Functions
             return services.AddSingleton(provider =>
             {
                 var options = provider.GetRequiredService<IOptions<StorageOptions>>().Value;
-                return options.BlobServiceUri is { } address ? new BlobServiceClient(address, credential) : new BlobServiceClient(options.ConnectionString);
+                return options.BlobServiceUri is { } address
+                    ? new BlobServiceClient(address, credential, StorageClientOptions())
+                    : new BlobServiceClient(options.ConnectionString, StorageClientOptions());
             });
         }
     }

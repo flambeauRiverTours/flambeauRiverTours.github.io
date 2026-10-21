@@ -25,7 +25,7 @@ namespace Portfolio.Assistant.Functions.Tests
 
         private RateLimiter RateLimiter(RateLimits? limits = null, IDailyCountStore? store = null)
         {
-            var rateLimiter = new RateLimiter(limits ?? new RateLimits(), clock, store ?? new MemoryDailyCountStore());
+            var rateLimiter = new RateLimiter(limits ?? new RateLimits(), clock, store ?? new MemoryDailyCountStore(), TimeSpan.FromSeconds(5));
             rateLimiters.Add(rateLimiter);
             return rateLimiter;
         }

@@ -1,4 +1,5 @@
-﻿using FluentAssertions;
+﻿using System.Diagnostics;
+using FluentAssertions;
 using Portfolio.Assistant.Core;
 
 namespace Portfolio.Assistant.Functions.Tests
@@ -6,6 +7,7 @@ namespace Portfolio.Assistant.Functions.Tests
     public sealed class RateLimiterTests : IDisposable
     {
         private static readonly RateLimits Limits = new() { PerMinute = 2, PerDay = 3, GlobalPerDay = 4 };
+        private static readonly TimeSpan ShortDeadline = TimeSpan.FromMilliseconds(200);
 
         private readonly ManualTimeProvider clock = new(new DateTimeOffset(2026, 10, 21, 14, 0, 0, TimeSpan.Zero));
         private readonly MemoryDailyCountStore store = new();
@@ -13,19 +15,21 @@ namespace Portfolio.Assistant.Functions.Tests
 
         public void Dispose() => created.ForEach(rateLimiter => rateLimiter.Dispose());
 
-        private RateLimiter RateLimiter(IDailyCountStore? countStore = null)
+        private RateLimiter RateLimiter(IDailyCountStore? countStore = null, TimeSpan? deadline = null)
         {
-            var rateLimiter = new RateLimiter(Limits, clock, countStore ?? store);
+            var rateLimiter = new RateLimiter(Limits, clock, countStore ?? store, deadline ?? TimeSpan.FromSeconds(5));
             created.Add(rateLimiter);
             return rateLimiter;
         }
+
+        private static Task<RateLimitDecision> Admit(RateLimiter rateLimiter, string visitor) => rateLimiter.AdmitAsync(visitor, TestContext.Current.CancellationToken);
 
         private static async Task<IEnumerable<bool>> Allowed(RateLimiter rateLimiter, params string[] visitors)
         {
             var allowed = new List<bool>();
             foreach (var visitor in visitors)
             {
-                allowed.Add(await rateLimiter.AdmitAsync(visitor) is RateLimitDecision.Allowed);
+                allowed.Add(await Admit(rateLimiter, visitor) is RateLimitDecision.Allowed);
             }
 
             return allowed;
@@ -39,7 +43,7 @@ namespace Portfolio.Assistant.Functions.Tests
             (await Allowed(rateLimiter, "203.0.113.7", "203.0.113.7", "203.0.113.7")).Should().Equal(true, true, false);
 
             clock.Now = clock.Now.AddMinutes(1);
-            (await rateLimiter.AdmitAsync("203.0.113.7")).Should().BeOfType<RateLimitDecision.Allowed>();
+            (await Admit(rateLimiter, "203.0.113.7")).Should().BeOfType<RateLimitDecision.Allowed>();
         }
 
         [Fact]
@@ -76,7 +80,7 @@ namespace Portfolio.Assistant.Functions.Tests
 
             store.WriteElsewhere(new DateOnly(2026, 10, 21), 4);
 
-            (await rateLimiter.AdmitAsync("198.51.100.9")).Should().BeOfType<RateLimitDecision.Denied>().Which.GlobalCapReached.Should().BeTrue();
+            (await Admit(rateLimiter, "198.51.100.9")).Should().BeOfType<RateLimitDecision.Denied>().Which.GlobalCapReached.Should().BeTrue();
         }
 
         // the cap is the cost control: without the count, no question goes to the model
@@ -85,7 +89,7 @@ namespace Portfolio.Assistant.Functions.Tests
         {
             var rateLimiter = RateLimiter(new FailingDailyCountStore());
 
-            await FluentActions.Awaiting(() => rateLimiter.AdmitAsync("203.0.113.7")).Should().ThrowAsync<InvalidOperationException>();
+            await FluentActions.Awaiting(() => Admit(rateLimiter, "203.0.113.7")).Should().ThrowAsync<InvalidOperationException>();
         }
 
         [Fact]
@@ -95,6 +99,46 @@ namespace Portfolio.Assistant.Functions.Tests
             await Allowed(rateLimiter, "203.0.113.7", "203.0.113.7", "203.0.113.7");
 
             store.Count(new DateOnly(2026, 10, 21)).Should().Be(2);
+        }
+
+        // storage's own timeouts and retries can run to minutes; the visitor's answer can't wait that long
+        [Fact]
+        public async Task An_admit_that_cant_reach_the_count_gives_up_at_the_deadline()
+        {
+            var rateLimiter = RateLimiter(new HangingDailyCountStore(), ShortDeadline);
+            var timer = Stopwatch.StartNew();
+
+            await FluentActions.Awaiting(() => Admit(rateLimiter, "203.0.113.7")).Should().ThrowAsync<TimeoutException>();
+
+            timer.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(2));
+        }
+
+        // one admit at a time holds the count, so a hung one must not hold everyone else for longer than the deadline
+        [Fact]
+        public async Task A_visitor_queued_behind_a_hung_admit_waits_no_longer_than_the_deadline()
+        {
+            var rateLimiter = RateLimiter(new HangingDailyCountStore(), ShortDeadline);
+            var timer = Stopwatch.StartNew();
+
+            var first = Admit(rateLimiter, "203.0.113.7");
+            var second = Admit(rateLimiter, "198.51.100.9");
+
+            await FluentActions.Awaiting(() => second).Should().ThrowAsync<TimeoutException>();
+            timer.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(2));
+            await FluentActions.Awaiting(() => first).Should().ThrowAsync<TimeoutException>();
+        }
+
+        // a slowdown mustn't spend the day's cap on visitors who have already gone
+        [Fact]
+        public async Task A_visitor_who_left_before_their_turn_isnt_counted()
+        {
+            var rateLimiter = RateLimiter();
+            using var left = new CancellationTokenSource();
+            await left.CancelAsync();
+
+            await FluentActions.Awaiting(() => rateLimiter.AdmitAsync("203.0.113.7", left.Token)).Should().ThrowAsync<OperationCanceledException>();
+
+            store.Count(new DateOnly(2026, 10, 21)).Should().Be(0);
         }
     }
 }

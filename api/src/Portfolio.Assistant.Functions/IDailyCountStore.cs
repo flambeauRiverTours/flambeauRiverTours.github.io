@@ -4,12 +4,12 @@
     internal interface IDailyCountStore
     {
         /// <summary>The day's count, or zero with no version before its first write.</summary>
-        Task<DailyCount> ReadAsync(DateOnly day);
+        Task<DailyCount> ReadAsync(DateOnly day, CancellationToken cancellationToken);
 
         /// <summary>Saves the day's count unless it changed since <paramref name="expectedVersion"/> was read.</summary>
         /// <param name="expectedVersion">Null when the day had no count yet.</param>
         /// <returns>The saved count, or null when another write came first.</returns>
-        Task<DailyCount?> TryWriteAsync(DateOnly day, int count, string? expectedVersion);
+        Task<DailyCount?> TryWriteAsync(DateOnly day, int count, string? expectedVersion, CancellationToken cancellationToken);
     }
 
     /// <summary>A day's global count as stored.</summary>

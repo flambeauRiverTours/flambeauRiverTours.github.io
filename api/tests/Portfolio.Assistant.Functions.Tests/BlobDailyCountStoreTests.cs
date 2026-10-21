@@ -45,13 +45,13 @@ namespace Portfolio.Assistant.Functions.Tests
             await SkipUnlessAzuriteRunsAsync();
             var store = new BlobDailyCountStore(container);
 
-            var unread = await store.ReadAsync(Day);
-            var written = await store.TryWriteAsync(Day, 1, unread.Version);
+            var unread = await store.ReadAsync(Day, Token);
+            var written = await store.TryWriteAsync(Day, 1, unread.Version, Token);
 
             unread.Should().Be(new DailyCount(0, Version: null));
             written!.Count.Should().Be(1);
-            (await store.ReadAsync(Day)).Should().Be(written);
-            (await container.GetBlobClient("2026-10-21.txt").DownloadContentAsync(TestContext.Current.CancellationToken)).Value.Content.ToString().Should().Be("1");
+            (await store.ReadAsync(Day, Token)).Should().Be(written);
+            (await container.GetBlobClient("2026-10-21.txt").DownloadContentAsync(Token)).Value.Content.ToString().Should().Be("1");
         }
 
         [Fact]
@@ -59,13 +59,13 @@ namespace Portfolio.Assistant.Functions.Tests
         {
             await SkipUnlessAzuriteRunsAsync();
             var store = new BlobDailyCountStore(container);
-            var first = await store.TryWriteAsync(Day, 1, expectedVersion: null);
+            var first = await store.TryWriteAsync(Day, 1, expectedVersion: null, Token);
 
-            await store.TryWriteAsync(Day, 2, first!.Version);
+            await store.TryWriteAsync(Day, 2, first!.Version, Token);
 
-            (await store.TryWriteAsync(Day, 2, first.Version)).Should().BeNull();
-            (await store.TryWriteAsync(Day, 5, expectedVersion: null)).Should().BeNull();
-            (await store.ReadAsync(Day)).Count.Should().Be(2);
+            (await store.TryWriteAsync(Day, 2, first.Version, Token)).Should().BeNull();
+            (await store.TryWriteAsync(Day, 5, expectedVersion: null, Token)).Should().BeNull();
+            (await store.ReadAsync(Day, Token)).Count.Should().Be(2);
         }
 
         [Fact]
@@ -74,9 +74,11 @@ namespace Portfolio.Assistant.Functions.Tests
             await SkipUnlessAzuriteRunsAsync();
             var store = new BlobDailyCountStore(container);
 
-            await store.TryWriteAsync(Day, 3, expectedVersion: null);
+            await store.TryWriteAsync(Day, 3, expectedVersion: null, Token);
 
-            (await store.ReadAsync(Day.AddDays(1))).Count.Should().Be(0);
+            (await store.ReadAsync(Day.AddDays(1), Token)).Count.Should().Be(0);
         }
+
+        private static CancellationToken Token => TestContext.Current.CancellationToken;
     }
 }

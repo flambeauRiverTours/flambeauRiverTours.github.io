@@ -1,4 +1,5 @@
-﻿using Portfolio.Assistant.Core;
+﻿using System.Globalization;
+using Portfolio.Assistant.Core;
 
 namespace Portfolio.Assistant.Functions
 {
@@ -7,8 +8,10 @@ namespace Portfolio.Assistant.Functions
     /// Visitors are counted in memory: the app runs on one instance (<c>maximumInstanceCount: 1</c>), addresses never leave it,
     /// and a restart forgetting them is harmless. The global count is the cost control, so it is stored: a restart, a deploy or
     /// Flex Consumption stopping an idle app must not reopen the cap. Without the stored count, no question is allowed.
+    /// One admit at a time holds the count, so each one, queueing included, gives up at a deadline.
     /// </remarks>
-    internal sealed class RateLimiter(RateLimits limits, TimeProvider clock, IDailyCountStore store) : IDisposable
+    /// <param name="deadline">How long an admit may wait and talk to storage; 5 s in the app.</param>
+    internal sealed class RateLimiter(RateLimits limits, TimeProvider clock, IDailyCountStore store, TimeSpan deadline) : IDisposable
     {
         // another instance is only ever counting during a deploy, so a few tries always settle it
         private const int MaxWriteAttempts = 3;
@@ -22,24 +25,43 @@ namespace Portfolio.Assistant.Functions
 
         /// <summary>Decides whether the visitor may ask now, and counts the question if so.</summary>
         /// <param name="visitorAddress">The visitor's address, from <see cref="VisitorAddress"/>.</param>
+        /// <param name="cancellationToken">The visitor's request: one who leaves while queued isn't counted.</param>
         /// <exception cref="InvalidOperationException">The global count couldn't be saved.</exception>
-        public async Task<RateLimitDecision> AdmitAsync(string visitorAddress)
+        /// <exception cref="TimeoutException">The deadline passed while waiting for the count or storage.</exception>
+        public async Task<RateLimitDecision> AdmitAsync(string visitorAddress, CancellationToken cancellationToken)
         {
-            await gate.WaitAsync();
+            using var withDeadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            withDeadline.CancelAfter(deadline);
+            try
+            {
+                return await AdmitBeforeAsync(visitorAddress, withDeadline.Token);
+            }
+            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+            {
+                throw new TimeoutException(string.Create(CultureInfo.InvariantCulture, $"The global count wasn't read and saved within {deadline.TotalSeconds:0.###} s."));
+            }
+        }
+
+        /// <inheritdoc />
+        public void Dispose() => gate.Dispose();
+
+        private async Task<RateLimitDecision> AdmitBeforeAsync(string visitorAddress, CancellationToken cancellationToken)
+        {
+            await gate.WaitAsync(cancellationToken);
             try
             {
                 var now = clock.GetUtcNow();
                 StartNewDayIfDue(now);
                 for (var attempt = 1; attempt <= MaxWriteAttempts; attempt++)
                 {
-                    global ??= await store.ReadAsync(today);
+                    global ??= await store.ReadAsync(today, cancellationToken);
                     var decision = RateLimitPolicy.Decide(limits, visitors.GetValueOrDefault(visitorAddress), global.Count, now);
                     if (decision is not RateLimitDecision.Allowed allowed)
                     {
                         return decision;
                     }
 
-                    global = await store.TryWriteAsync(today, allowed.GlobalCount, global.Version);
+                    global = await store.TryWriteAsync(today, allowed.GlobalCount, global.Version, cancellationToken);
                     if (global is not null)
                     {
                         visitors[visitorAddress] = allowed.Visitor;
@@ -54,9 +76,6 @@ namespace Portfolio.Assistant.Functions
                 gate.Release();
             }
         }
-
-        /// <inheritdoc />
-        public void Dispose() => gate.Dispose();
 
         private void StartNewDayIfDue(DateTimeOffset now)
         {

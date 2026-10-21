@@ -63,9 +63,9 @@ namespace Portfolio.Assistant.Functions.Tests
         /// <summary>Another instance's write, which makes this one's version stale.</summary>
         public void WriteElsewhere(DateOnly day, int count) => counts[day] = new DailyCount(count, $"v{++writes}");
 
-        public Task<DailyCount> ReadAsync(DateOnly day) => Task.FromResult(counts.GetValueOrDefault(day) ?? new DailyCount(0, Version: null));
+        public Task<DailyCount> ReadAsync(DateOnly day, CancellationToken cancellationToken) => Task.FromResult(counts.GetValueOrDefault(day) ?? new DailyCount(0, Version: null));
 
-        public Task<DailyCount?> TryWriteAsync(DateOnly day, int count, string? expectedVersion)
+        public Task<DailyCount?> TryWriteAsync(DateOnly day, int count, string? expectedVersion, CancellationToken cancellationToken)
         {
             if (counts.GetValueOrDefault(day)?.Version != expectedVersion)
             {
@@ -82,10 +82,28 @@ namespace Portfolio.Assistant.Functions.Tests
     /// </summary>
     internal sealed class FailingDailyCountStore : IDailyCountStore
     {
-        public Task<DailyCount> ReadAsync(DateOnly day) => Task.FromException<DailyCount>(new InvalidOperationException("Storage is down."));
+        public Task<DailyCount> ReadAsync(DateOnly day, CancellationToken cancellationToken) => Task.FromException<DailyCount>(new InvalidOperationException("Storage is down."));
 
-        public Task<DailyCount?> TryWriteAsync(DateOnly day, int count, string? expectedVersion) =>
+        public Task<DailyCount?> TryWriteAsync(DateOnly day, int count, string? expectedVersion, CancellationToken cancellationToken) =>
             Task.FromException<DailyCount?>(new InvalidOperationException("Storage is down."));
+    }
+
+    /// <summary>
+    /// Never answers until cancelled, as a hung storage connection behaves.
+    /// </summary>
+    internal sealed class HangingDailyCountStore : IDailyCountStore
+    {
+        public async Task<DailyCount> ReadAsync(DateOnly day, CancellationToken cancellationToken)
+        {
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+            return new DailyCount(0, Version: null);
+        }
+
+        public async Task<DailyCount?> TryWriteAsync(DateOnly day, int count, string? expectedVersion, CancellationToken cancellationToken)
+        {
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+            return null;
+        }
     }
 
     /// <summary>

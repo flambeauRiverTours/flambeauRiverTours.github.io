@@ -45,7 +45,7 @@ Locally the app signs in with your `az login`; in Azure it uses its managed iden
 ## Rate limiting
 
 - **Visitors** are counted in memory on the app's one instance: 5 questions a minute and 30 a day each, with IPv6 counted per /64 network. Addresses never leave memory, and a restart forgetting them is harmless.
-- **Everyone together** is capped at 300 a day. This count is the cost control, so it's stored as one small blob per UTC day in `rate-limits/`, written only if unchanged since it was read. A restart, a deploy or Flex Consumption stopping the idle app can't reopen the cap. If storage can't be reached, questions get a 503 rather than going to the model uncounted.
+- **Everyone together** is capped at 300 a day. This count is the cost control, so it's stored as one small blob per UTC day in `rate-limits/`, written only if unchanged since it was read. A restart, a deploy or Flex Consumption stopping the idle app can't reopen the cap. If storage can't be reached within 5 seconds (each storage call gives up after 3, with one retry), questions get a 503 rather than going to the model uncounted, and a visitor who leaves while waiting isn't counted.
 
 ## Accepted risk: history comes from the client
 
