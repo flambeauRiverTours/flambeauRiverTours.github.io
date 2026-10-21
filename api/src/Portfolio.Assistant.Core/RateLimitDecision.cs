@@ -14,6 +14,7 @@
 
         /// <summary>Answer with a 429; no counts change.</summary>
         /// <param name="RetryAfterSeconds">Whole seconds until the visitor may ask again; at least 1.</param>
-        public sealed record Denied(int RetryAfterSeconds) : RateLimitDecision;
+        /// <param name="GlobalCapReached">Everyone is turned away until midnight, which raises an alert.</param>
+        public sealed record Denied(int RetryAfterSeconds, bool GlobalCapReached) : RateLimitDecision;
     }
 }

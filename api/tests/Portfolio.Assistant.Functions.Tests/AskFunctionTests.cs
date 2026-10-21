@@ -2,7 +2,7 @@
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 using Portfolio.Assistant.Core;
 
 namespace Portfolio.Assistant.Functions.Tests
@@ -15,13 +15,15 @@ namespace Portfolio.Assistant.Functions.Tests
         private static readonly KnowledgeBase Knowledge = KnowledgeBase.Create("Rules.", "Site.", "FAQ.", [Spie]);
 
         private readonly ManualTimeProvider clock = new(new DateTimeOffset(2026, 10, 21, 14, 0, 0, TimeSpan.Zero));
+        private readonly RecordingQuestionLog log = new();
+        private readonly RecordingLogger<AskFunction> logger = new();
 
         private static HttpRequest Post(string body, string? forwardedFor = "203.0.113.7:51234") => TestRequests.Post(body, forwardedFor);
 
         private InMemoryRateLimiter OneQuestionAMinute() => new(new RateLimits { PerMinute = 1 }, clock);
 
-        private Task<IActionResult> Ask(HttpRequest request, IAnswerModel? model = null, InMemoryRateLimiter? rateLimiter = null, CancellationToken? cancellationToken = null) =>
-            new AskFunction(Knowledge, model ?? ScriptedModel.Replying("Jack works at SPIE.\nLinks: experience-spie"), rateLimiter ?? new InMemoryRateLimiter(new RateLimits(), clock), NullLogger<AskFunction>.Instance)
+        private Task<IActionResult> Ask(HttpRequest request, IAnswerModel? model = null, InMemoryRateLimiter? rateLimiter = null, IQuestionLog? questionLog = null, CancellationToken? cancellationToken = null) =>
+            new AskFunction(Knowledge, model ?? ScriptedModel.Replying("Jack works at SPIE.\nLinks: experience-spie"), rateLimiter ?? new InMemoryRateLimiter(new RateLimits(), clock), questionLog ?? log, clock, logger)
                 .Ask(request, cancellationToken ?? TestContext.Current.CancellationToken);
 
         private static (int Status, JsonElement Body) StatusAndBody(IActionResult result)
@@ -163,5 +165,63 @@ namespace Portfolio.Assistant.Functions.Tests
 
             await FluentActions.Awaiting(() => Ask(Post(Question), cancellationToken: hungUp.Token)).Should().ThrowAsync<OperationCanceledException>();
         }
+
+        [Fact]
+        public async Task Every_request_is_logged_once_with_how_it_ended()
+        {
+            var rateLimiter = OneQuestionAMinute();
+            var blocked = new ScriptedModel(() => new ModelAnswer(ModelAnswer.FilteredReply, 88, 0, Filtered: true));
+
+            await Ask(Post(Question), rateLimiter: rateLimiter);
+            await Ask(Post("{}"), rateLimiter: rateLimiter);
+            await Ask(Post(Question), rateLimiter: rateLimiter);
+            await Ask(Post(Question, "198.51.100.9"), ScriptedModel.Throwing(new HttpRequestException()), rateLimiter);
+            await Ask(Post(Question, "198.51.100.10"), blocked, rateLimiter);
+
+            log.Entries.Select(entry => entry.Outcome).Should().Equal("ok", "invalid", "rate_limited", "model_error", "filtered");
+        }
+
+        [Fact]
+        public async Task The_log_entry_has_the_arrival_time_the_time_taken_and_what_answered()
+        {
+            var arrived = clock.Now;
+            var slowModel = new ScriptedModel(() =>
+            {
+                clock.Now = clock.Now.AddSeconds(2.5);
+                return new ModelAnswer("Jack works at SPIE.\nLinks: experience-spie", 900, 12);
+            });
+
+            await Ask(Post(Question), slowModel);
+
+            var entry = log.Entries.Should().ContainSingle().Subject;
+            entry.Should().BeEquivalentTo(new { Timestamp = arrived, LatencyMs = 2500L, Deployment = "test-deployment", Knowledge.PromptVersion, Question = "Where does Jack work?", Answer = "Jack works at SPIE." });
+            entry.RequestId.Should().NotBeNullOrEmpty();
+        }
+
+        [Fact]
+        public async Task Reaching_the_global_cap_logs_the_warning_the_alert_watches_for()
+        {
+            var rateLimiter = new InMemoryRateLimiter(new RateLimits { GlobalPerDay = 1 }, clock);
+
+            await Ask(Post(Question), rateLimiter: rateLimiter);
+            await Ask(Post(Question, "198.51.100.9"), rateLimiter: rateLimiter);
+
+            logger.Entries.Should().ContainSingle(entry => entry.Level == LogLevel.Warning).Which.Message.Should().StartWith(AskFunction.GlobalCapReachedMessage);
+        }
+
+        [Fact]
+        public async Task One_visitor_over_their_limit_raises_no_warning()
+        {
+            var rateLimiter = OneQuestionAMinute();
+
+            await Ask(Post(Question), rateLimiter: rateLimiter);
+            await Ask(Post(Question), rateLimiter: rateLimiter);
+
+            logger.Entries.Should().NotContain(entry => entry.Level >= LogLevel.Warning);
+        }
+
+        [Fact]
+        public async Task A_log_that_fails_to_write_still_answers_the_visitor() =>
+            StatusAndBody(await Ask(Post(Question), questionLog: new FailingQuestionLog())).Status.Should().Be(200);
     }
 }

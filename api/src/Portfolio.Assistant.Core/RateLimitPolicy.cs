@@ -12,16 +12,17 @@
         {
             var usage = WithMinuteRolledOver(visitor, now);
             var untilMidnight = NextUtcMidnight(now) - now;
+            var globalCapReached = globalCount >= limits.GlobalPerDay;
             TimeSpan[] waits =
             [
-                globalCount >= limits.GlobalPerDay ? untilMidnight : TimeSpan.Zero,
+                globalCapReached ? untilMidnight : TimeSpan.Zero,
                 usage.DayCount >= limits.PerDay ? untilMidnight : TimeSpan.Zero,
                 usage.MinuteCount >= limits.PerMinute ? usage.MinuteStart + Minute - now : TimeSpan.Zero,
             ];
 
             var longestWait = waits.Max();
             return longestWait > TimeSpan.Zero
-                ? new RateLimitDecision.Denied(RoundUpToWholeSeconds(longestWait))
+                ? new RateLimitDecision.Denied(RoundUpToWholeSeconds(longestWait), globalCapReached)
                 : new RateLimitDecision.Allowed(usage with { DayCount = usage.DayCount + 1, MinuteCount = usage.MinuteCount + 1 }, globalCount + 1);
         }
 

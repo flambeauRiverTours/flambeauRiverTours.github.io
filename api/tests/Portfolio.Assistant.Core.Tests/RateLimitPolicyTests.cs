@@ -45,6 +45,13 @@ namespace Portfolio.Assistant.Core.Tests
             RetryAfterSecondsOf(Decide(visitor: null, globalCount: 300)).Should().Be(10 * 60 * 60);
 
         [Fact]
+        public void A_denial_says_whether_the_global_cap_caused_it()
+        {
+            Decide(visitor: null, globalCount: 300).Should().BeOfType<RateLimitDecision.Denied>().Which.GlobalCapReached.Should().BeTrue();
+            Decide(new VisitorUsage(DayCount: 30, Now, MinuteCount: 0), globalCount: 299).Should().BeOfType<RateLimitDecision.Denied>().Which.GlobalCapReached.Should().BeFalse();
+        }
+
+        [Fact]
         public void When_several_limits_are_hit_the_longest_wait_wins() =>
             RetryAfterSecondsOf(Decide(new VisitorUsage(DayCount: 30, Now.AddSeconds(-20), MinuteCount: 5))).Should().Be(10 * 60 * 60);
 

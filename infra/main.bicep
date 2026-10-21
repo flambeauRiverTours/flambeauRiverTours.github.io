@@ -17,6 +17,10 @@ param foundryAccountName string
 @minLength(1)
 param foundryDeployment string = 'claude-haiku-5-5'
 
+@description('Where alerts are sent: the assistant failing, or the global daily cap turning everyone away.')
+@secure()
+param alertEmail string
+
 @description('Origins the browser may call the API from.')
 param allowedOrigins string[] = [
   'https://jacktreadwell.com'
@@ -194,6 +198,11 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
           name: 'Foundry__Deployment'
           value: foundryDeployment
         }
+        {
+          // written with the app's identity, through the Storage Blob Data Owner role below
+          name: 'QuestionLog__BlobServiceUri'
+          value: storage.properties.primaryEndpoints.blob
+        }
       ]
     }
   }
@@ -220,6 +229,98 @@ resource foundryUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
 }
 
 // The budget goes in budget.bicep, deployed once by hand (task 2.4): its start date can't change after creation
+
+// Free: the first 1,000 emails a month cost nothing
+resource alerts 'Microsoft.Insights/actionGroups@2023-01-01' = {
+  name: 'ag-${namePrefix}'
+  location: 'global'
+  properties: {
+    groupShortName: 'assistant'
+    enabled: true
+    emailReceivers: [
+      {
+        name: 'owner'
+        emailAddress: alertEmail
+        useCommonAlertSchema: true
+      }
+    ]
+  }
+}
+
+// About $0.10 a month. A failed model call or log write is logged with its exception, which App Insights counts here
+resource exceptionAlert 'Microsoft.Insights/metricAlerts@2026-01-01' = {
+  name: 'alert-${namePrefix}-exceptions'
+  location: 'global'
+  properties: {
+    description: 'The assistant is failing: more than 10 exceptions in an hour (model, sign-in or storage).'
+    severity: 2
+    enabled: true
+    scopes: [
+      insights.id
+    ]
+    evaluationFrequency: 'PT15M'
+    windowSize: 'PT1H'
+    autoMitigate: true
+    criteria: {
+      'odata.type': 'Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria'
+      allOf: [
+        {
+          criterionType: 'StaticThresholdCriterion'
+          name: 'exceptions'
+          metricName: 'exceptions/count'
+          metricNamespace: 'microsoft.insights/components'
+          operator: 'GreaterThan'
+          // a deploy's smoke question retries for a few minutes while a new role applies, failing up to 10 times
+          threshold: 10
+          timeAggregation: 'Count'
+        }
+      ]
+    }
+    actions: [
+      {
+        actionGroupId: alerts.id
+      }
+    ]
+  }
+}
+
+// About $0.50 a month (a log alert checked every 15 minutes). The text is AskFunction.GlobalCapReachedMessage
+resource globalCapAlert 'Microsoft.Insights/scheduledQueryRules@2026-03-01' = {
+  name: 'alert-${namePrefix}-global-cap'
+  location: location
+  properties: {
+    description: 'The global daily cap is turning every visitor away until midnight UTC: heavy use, or someone working through it.'
+    severity: 2
+    enabled: true
+    scopes: [
+      insights.id
+    ]
+    evaluationFrequency: 'PT15M'
+    windowSize: 'PT15M'
+    criteria: {
+      allOf: [
+        {
+          query: 'traces | where message startswith "The global daily cap is reached"'
+          timeAggregation: 'Count'
+          operator: 'GreaterThan'
+          threshold: 0
+          failingPeriods: {
+            numberOfEvaluationPeriods: 1
+            minFailingPeriodsToAlert: 1
+          }
+        }
+      ]
+    }
+    // one email for the day, not one every 15 minutes until midnight
+    autoMitigate: false
+    muteActionsDuration: 'PT24H'
+    actions: {
+      actionGroups: [
+        alerts.id
+      ]
+    }
+  }
+}
 
 output functionAppName string = functionApp.name
 output functionAppUrl string = 'https://${functionApp.properties.defaultHostName}'

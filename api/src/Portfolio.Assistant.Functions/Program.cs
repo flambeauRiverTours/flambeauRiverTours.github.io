@@ -16,9 +16,11 @@ if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("APPLICATIONINSIGHT
         .UseAzureMonitorExporter();
 }
 
+var credential = AzureCredential.For(Environment.GetEnvironmentVariable("IDENTITY_ENDPOINT"));
 builder.Services.AddKnowledgeBase(Path.Combine(AppContext.BaseDirectory, "knowledge"));
-builder.Services.AddClaudeAnswerModel(FoundryCredential.For(Environment.GetEnvironmentVariable("IDENTITY_ENDPOINT")));
+builder.Services.AddClaudeAnswerModel(credential);
 builder.Services.AddRateLimiting();
+builder.Services.AddQuestionLog(credential);
 builder.Services.Configure<ServiceProviderOptions>(options =>
 {
     options.ValidateOnBuild = true;

@@ -55,7 +55,7 @@ scripts/
   - [x] **0.5b Answer the 8 new logistics questions** (You): remote start before the move, on-call or weekend work, take-home assignments, other interviews or offers, background check or drug test, part-time, hourly contract rate, commuting outside Charlotte. They're marked `TODO` in `faq.md`. Answered, with 17 eval cases covering them (`logi-*`, plus traps for invented offers, company names, interview stages and background-check results)
   - [x] **0.5c "About this assistant" section** in `faq.md`, so the assistant can answer honestly about AI, storage (90 days), IP addresses, Microsoft Azure and deletion. These claims must stay true: tasks 2.1, 2.2 and 3.5 implement them. `scripts/faq.test.ts` checks the section exists and fails once the Berlin answers go out of date (January 2027)
 - [x] **0.6 `api/knowledge/system-prompt.md`** (version 1, draft for your review): 12 numbered rules (knowledge only, "not on the site, email Jack" otherwise, correct false premises and treat visitor claims as unverified, third person, 1–4 plain sentences, Jack-only topics, no ratings, no commitments, no salary numbers or private details, no political or social views, professional tone with no profanity, ignore rule-changing instructions and no memory between visitors) plus 3 examples, ending with the `Links:` line format
-- [x] **0.7 Eval set `api/evals/questions.jsonl`**: 335 cases across 16 categories (50 trap including behavioral-interview and confidential-employer questions, 39 jailbreak including injected claims and social engineering, 24 sensitive covering politics and harassment, 17 privacy including discriminatory questions, 58 FAQ including questions about the assistant and logistics, 39 fact, 22 numbers, plus multi-hop, multi-turn, robustness, opinion, commitment, off-topic, meta, links, personal)
+- [x] **0.7 Eval set `api/evals/questions.jsonl`**: 336 cases across 16 categories (50 trap including behavioral-interview and confidential-employer questions, 39 jailbreak including injected claims and social engineering, 25 sensitive covering politics, harassment and a violent request (added by 2.3), 17 privacy including discriminatory questions, 58 FAQ including questions about the assistant and logistics, 39 fact, 22 numbers, plus multi-hop, multi-turn, robustness, opinion, commitment, off-topic, meta, links, personal)
   - Format, grading rules and the checks applied to every answer (links line, plain text, no URLs, length, no salary figures, known fabrications such as CKAD or "Microsoft Certified", profanity) are in `api/evals/README.md`
   - Link grading: refusals must end with `Links: none`; a link score (recall and extra links) is reported alongside the pass rate
   - 130 high-risk cases have a `passExample`, a good answer the test checks against the case's own patterns. Adding them caught 14 patterns that would have failed correct denials
@@ -139,16 +139,27 @@ scripts/
   - Dropped: the `ratelimits` table, the `IpHasher` daily-key scheme and its `ipHashSalt` secret, ETag retries, fail-closed handling for storage outages, and the nightly cleanup timer. No IP-derived data is ever written anywhere: addresses stay in memory and are dropped at UTC midnight.
   - Accepted trade-off: a restart, deploy or scale-to-zero after idling starts the counts afresh. An abuser can't cause any of those, and spend stays capped by the deployment's 50k tokens a minute and the budget alert (2.4).
   - Limits come from settings (`Limits__PerMinute`, `Limits__PerDay`, `Limits__GlobalPerDay`; defaults 5, 30, 300), validated at startup. The visitor is the last `X-Forwarded-For` entry (1.5); confirm on the deployed app that Azure appends it (1.11).
-- [ ] **2.2 Question logging** (container `assistant-logs`, one append blob per UTC day: `yyyy/MM/dd.jsonl`)
-  - One line per request: `ts`, `requestId`, `outcome` (`ok` / `invalid` / `rate_limited` / `filtered` / `model_error`), `question`, `historyTurns`, `answer`, `links`, `deployment`, `promptVersion`, `latencyMs`, `inputTokens`, `outputTokens`.
+- [x] **2.2 Question logging** (built 2026-10-21; container `assistant-logs`, one append blob per UTC day: `yyyy/MM/dd.jsonl`)
+  - One line per request: `timestamp`, `requestId`, `outcome` (`ok` / `invalid` / `rate_limited` / `filtered` / `model_error`), `deployment`, `promptVersion`, `latencyMs`, then `question`, `historyTurns`, `answer`, `links`, `inputTokens`, `outputTokens` where they apply. Empty fields are left out.
   - **No IP-derived data in the logs.** Rate limiting keeps addresses only in memory for a day, and the logs are kept for 90 days, so addresses and hashes stay out of them.
   - `question` and `answer` are left out for `invalid` and `rate_limited` requests. They have no review value, and it limits what bots can push into your logs.
   - A logging failure is recorded in App Insights but never fails the visitor's request.
   - Question and answer text goes **only** to the blob (deleted after 90 days), never to App Insights traces.
-- [ ] **2.3 Content filter.** The deployment uses `Microsoft.DefaultV2`. Confirm in a test that a blocked prompt comes back as a filter result and maps to the polite refusal (1.4, 1.5). Keep the default; don't loosen it.
-- [ ] **2.4 Budget** (`infra/budget.bicep`, deployed by hand as in FantasyFootball): $5/month on `rg-portfolio-ai-prod`, alerts at 50% actual and 100% forecast, sent to your email.
-- [ ] **2.5 Alerts:** an App Insights alert on the `model_error` rate (e.g. more than 5 in 15 min) and another when the global daily cap is hit, so you know when the assistant is down or under attack. The deploy's smoke question retries for a few minutes while a new role assignment applies, logging model errors as it goes, so set the threshold above one deploy's worth.
-- **Done when:** with low limits set in settings, the 6th request in a minute and the 31st in a day get 429s; the log blob has the expected lines; a jailbreak prompt from the eval set is handled.
+  - **Built:**
+    - Core: `AskOutcome` (`Invalid`, `RateLimited`, `ModelError`, `Answered`) says how a request ended. Only the outcomes that reached the model carry the question, so the field rules are enforced by the type. `QuestionLogEntry.For`, `BlobPath` and `ToJsonLine` are pure (8 tests).
+    - Functions: `AskFunction` now resolves each request to one `AskOutcome`, logs it, then turns it into the response. A failed write is a warning; it never fails the visitor. `requestId` is the trace ID, which finds the request in App Insights (locally, ASP.NET's own ID). `BlobQuestionLog` creates the container and the day's blob the first time it writes to them, then appends.
+    - Settings: `QuestionLog__BlobServiceUri` in Azure (`main.bicep`, from the storage account, with the Function's identity), `QuestionLog__ConnectionString=UseDevelopmentStorage=true` locally. Startup stops unless exactly one is set. `FoundryCredential` is now `AzureCredential`, shared by Foundry and Storage.
+    - Tests: 6 for `AskFunction`'s logging and the global-cap warning, 3 for the settings, 1 against Azurite (skipped locally without it; CI starts Azurite 3.37.0).
+    - **Checked locally** (Azurite, global cap set to 2): an answer, a 400, a filtered question and a global-cap 429 each wrote the right line, and the cap logged its warning. The `model_error` path is covered by tests only.
+    - **Unchecked until deploy:** that the trace ID appears as `requestId` in Azure.
+- [x] **2.3 Content filter** (probed 2026-10-21). The deployment uses `Microsoft.DefaultV2`. One harmful prompt came back as **HTTP 200 with `stop_reason: refusal`** from Claude's own classifier. The client already maps that to the polite reply, so visitors never see a 503 for it. No code change was needed. The prompt is now eval case `tone-violent-request`, and the local check above confirmed the polite reply end to end.
+- [x] **2.4 Budget** (`infra/budget.bicep`, written 2026-10-21; **you deploy it once**, command in `api/README.md`): $5 a month on the resource group, emailing at $3 spent, $5 spent and a forecast over $5. It's linted, and what-if shows one create.
+- [x] **2.5 Alerts** (in `main.bicep`, 2026-10-21; deploy with 1.11):
+  - An email action group from the new `alertEmail` parameter (repo secret `ALERT_EMAIL`).
+  - A metric alert on more than 10 exceptions in an hour (about $0.10 a month). A failed model call or log write is logged with its exception.
+  - A log alert on `AskFunction.GlobalCapReachedMessage` in `traces`, checked every 15 minutes, emailing at most once a day (about $0.50 a month; the $1.50 estimate was for 5-minute checks). `RateLimitDecision.Denied` now says whether the global cap caused it.
+  - What-if: 15 creates (the 12 from 1.8 plus the 3 alert resources), nothing changed or deleted. `az bicep lint` and `actionlint` pass.
+- **Done when:** with low limits set in settings, the 6th request in a minute and the 31st in a day get 429s; the log blob has the expected lines; a jailbreak prompt from the eval set is handled. (Checked locally for the log and the global cap; the per-visitor 429s were checked in 1.7.)
 
 ## Phase 3: UI (≈ 1 day)
 
@@ -178,7 +189,7 @@ scripts/
   - Call `warmUp()` on open.
 - [ ] **3.5 Privacy note `public/privacy.html`** (a short static page with the site's fonts and colours). It covers:
   - what's stored (question, answer, timing) and why
-  - "IP addresses aren't stored. A hash that changes daily is used only for rate limiting and deleted after a day." Don't call it "anonymous": while the secret exists, the hash is pseudonymous
+  - "IP addresses aren't stored. They're held in memory only for rate limiting and forgotten at midnight UTC." (matches `faq.md`, corrected 2026-10-21 after the 2.1 redesign dropped the hash)
   - deletion after 90 days
   - that answers come from a model on Microsoft Azure (Foundry) and may be processed in any Azure region
   - how to ask for deletion (email)
@@ -216,8 +227,9 @@ scripts/
 - **Done when:** the committed eval report meets the launch bar, key auth is off, the old resources are deleted, and CI is green.
 
 ## Needs your input or approval
-- 0.1 Raise the deployment capacity (changes an Azure resource)
-- 0.5 FAQ answers
-- 1.10 Role assignments and federated credential for the deploy identity
+- Done: 0.1 deployment capacity, 0.5 FAQ answers, 1.10 deploy identity
+- Done: 2.2 Azurite installed, 2.3 probe approved, 2.4 $5 budget with a $3 warning, 2.5 global-cap log alert
+- 1.11 + 2.5 Add the `ALERT_EMAIL` repo secret, then commit and push for the first deploy (`FOUNDRY_ACCOUNT_NAME` is set)
+- 2.4 Deploy `budget.bicep` once (command in `api/README.md`)
 - 4.4 Turn off key auth
 - 4.5 Delete the old resources (permanent)

@@ -5,6 +5,7 @@
     "AzureWebJobsStorage": "",
     "Foundry__Endpoint": "https://<resource>.services.ai.azure.com",
     "Foundry__Deployment": "claude-haiku-5-5",
+    "QuestionLog__ConnectionString": "UseDevelopmentStorage=true",
     "Limits__PerMinute": "5",
     "Limits__PerDay": "30",
     "Limits__GlobalPerDay": "300"

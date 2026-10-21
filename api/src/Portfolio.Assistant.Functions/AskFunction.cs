@@ -1,4 +1,5 @@
-﻿using System.Globalization;
+﻿using System.Diagnostics;
+using System.Globalization;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -9,35 +10,49 @@ using Portfolio.Assistant.Core;
 namespace Portfolio.Assistant.Functions
 {
     /// <summary>Answers a visitor's question about Jack: <c>POST /api/ask</c>.</summary>
-    internal sealed class AskFunction(KnowledgeBase knowledge, IAnswerModel model, InMemoryRateLimiter rateLimiter, ILogger<AskFunction> logger)
+    internal sealed class AskFunction(KnowledgeBase knowledge, IAnswerModel model, InMemoryRateLimiter rateLimiter, IQuestionLog questionLog, TimeProvider clock, ILogger<AskFunction> logger)
     {
+        /// <summary>The start of the warning logged for each question the global cap turns away; <c>main.bicep</c>'s alert searches for it.</summary>
+        public const string GlobalCapReachedMessage = "The global daily cap is reached";
+
         private const int MaxBodyBytes = 16 * 1024;
 
-        /// <summary>Validates, rate-limits, asks the model and returns the answer with its page links.</summary>
+        /// <summary>Validates, rate-limits, asks the model, logs how the request ended and returns the answer with its page links.</summary>
         [Function("Ask")]
         public async Task<IActionResult> Ask([HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "ask")] HttpRequest request, CancellationToken cancellationToken)
         {
+            var arrived = clock.GetUtcNow();
             Build.AddHeader(request.HttpContext.Response);
 
+            var outcome = await AnswerAsync(request, cancellationToken);
+
+            await LogAsync(QuestionLogEntry.For(outcome, RequestId(request), arrived, clock.GetUtcNow() - arrived, model.Deployment, knowledge.PromptVersion));
+            return Respond(outcome, request.HttpContext.Response);
+        }
+
+        private async Task<AskOutcome> AnswerAsync(HttpRequest request, CancellationToken cancellationToken)
+        {
             var validation = await ReadAskAsync(request, cancellationToken);
             if (validation is AskValidation.Invalid invalid)
             {
-                return new BadRequestObjectResult(new { error = "invalid", detail = invalid.Detail });
+                return new AskOutcome.Invalid(invalid.Detail);
             }
 
             if (rateLimiter.Admit(VisitorAddress.Of(request)) is RateLimitDecision.Denied denied)
             {
-                return TooManyRequests(request.HttpContext.Response, denied.RetryAfterSeconds);
+                if (denied.GlobalCapReached)
+                {
+                    logger.LogWarning(GlobalCapReachedMessage + ": everyone is turned away until midnight UTC");
+                }
+
+                return new AskOutcome.RateLimited(denied.RetryAfterSeconds);
             }
 
-            var answer = await AskModelAsync((AskValidation.Valid)validation, cancellationToken);
-            if (answer is null)
-            {
-                return new ObjectResult(new { error = "unavailable" }) { StatusCode = StatusCodes.Status503ServiceUnavailable };
-            }
-
-            var reply = LinkExtractor.Extract(answer.Text, knowledge.Links);
-            return new OkObjectResult(new { answer = reply.Text, links = reply.Links });
+            var ask = (AskValidation.Valid)validation;
+            var answer = await AskModelAsync(ask, cancellationToken);
+            return answer is null
+                ? new AskOutcome.ModelError(ask)
+                : new AskOutcome.Answered(ask, answer, LinkExtractor.Extract(answer.Text, knowledge.Links));
         }
 
         // reads one byte past the cap at most, so an oversized body is refused without being read in full
@@ -77,6 +92,32 @@ namespace Portfolio.Assistant.Functions
                 return null;
             }
         }
+
+        // the trace ID finds the request's telemetry in App Insights; without telemetry (locally, in tests), ASP.NET's own ID stands in
+        private static string RequestId(HttpRequest request) => Activity.Current?.TraceId.ToHexString() ?? request.HttpContext.TraceIdentifier;
+
+        // the log is for review: a failed write costs a warning, never the visitor's answer.
+        // It isn't cancelled with the request, so an answer the visitor left before reading is still kept
+        private async Task LogAsync(QuestionLogEntry entry)
+        {
+            try
+            {
+                await questionLog.WriteAsync(entry, CancellationToken.None);
+            }
+            catch (Exception error)
+            {
+                logger.LogWarning(error, "The question log write for request {RequestId} failed", entry.RequestId);
+            }
+        }
+
+        private static IActionResult Respond(AskOutcome outcome, HttpResponse response) => outcome switch
+        {
+            AskOutcome.Answered answered => new OkObjectResult(new { answer = answered.Reply.Text, links = answered.Reply.Links }),
+            AskOutcome.Invalid invalid => new BadRequestObjectResult(new { error = "invalid", detail = invalid.Detail }),
+            AskOutcome.RateLimited limited => TooManyRequests(response, limited.RetryAfterSeconds),
+            AskOutcome.ModelError => new ObjectResult(new { error = "unavailable" }) { StatusCode = StatusCodes.Status503ServiceUnavailable },
+            _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, "Unknown outcome."),
+        };
 
         private static ObjectResult TooManyRequests(HttpResponse response, int retryAfterSeconds)
         {

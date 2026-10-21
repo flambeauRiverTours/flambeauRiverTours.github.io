@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Text;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Portfolio.Assistant.Core;
 
 namespace Portfolio.Assistant.Functions.Tests
@@ -24,6 +25,45 @@ namespace Portfolio.Assistant.Functions.Tests
             Prompts.Add(prompt);
             return Task.FromResult(answer());
         }
+    }
+
+    /// <summary>
+    /// Keeps what would have been written to the blob.
+    /// </summary>
+    internal sealed class RecordingQuestionLog : IQuestionLog
+    {
+        public List<QuestionLogEntry> Entries { get; } = [];
+
+        public Task WriteAsync(QuestionLogEntry entry, CancellationToken cancellationToken)
+        {
+            Entries.Add(entry);
+            return Task.CompletedTask;
+        }
+    }
+
+    /// <summary>
+    /// Fails every write, as storage does when it is down or the role is missing.
+    /// </summary>
+    internal sealed class FailingQuestionLog : IQuestionLog
+    {
+        public Task WriteAsync(QuestionLogEntry entry, CancellationToken cancellationToken) =>
+            Task.FromException(new InvalidOperationException("Storage is down."));
+    }
+
+    /// <summary>
+    /// Keeps each log message with its level.
+    /// </summary>
+    internal sealed class RecordingLogger<T> : ILogger<T>
+    {
+        public List<(LogLevel Level, string Message)> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+            Entries.Add((logLevel, formatter(state, exception)));
     }
 
     /// <summary>

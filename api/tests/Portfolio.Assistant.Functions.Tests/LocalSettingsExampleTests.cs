@@ -16,6 +16,7 @@ namespace Portfolio.Assistant.Functions.Tests
 
             values.GetProperty("FUNCTIONS_WORKER_RUNTIME").GetString().Should().Be("dotnet-isolated");
             values.GetProperty("Foundry__Endpoint").GetString().Should().StartWith("https://");
+            values.GetProperty("QuestionLog__ConnectionString").GetString().Should().Be("UseDevelopmentStorage=true");
         }
 
         [Fact]

@@ -66,7 +66,9 @@ Adopted from the FantasyFootballWebsite repository's `docs/standards.md` (sectio
 ## Logging
 
 - Question and answer text is logged only to the 90-day blob, never to App Insights
+  - Only for requests that reached the model: `AskOutcome` gives turned-away requests no question to log
 - IP addresses are never logged, hashed or not
+- A warning an alert searches for has its text in a constant, which the test and the alert's query both name
 
 ## Accepted exceptions
 
@@ -85,6 +87,8 @@ Adopted from the FantasyFootballWebsite repository's `docs/standards.md` (sectio
   - why: a test that never failed proves nothing
 - Real data over invented data
   - The eval set and knowledge files are tested as they are, not copied into fixtures
+- Storage code is tested against Azurite, not a mocked SDK
+  - Skipped locally when Azurite isn't running; CI starts it and fails without it
 
 ## Comments
 
@@ -123,15 +127,20 @@ Adopted from the FantasyFootballWebsite repository's `docs/standards.md` (sectio
 - CI reaches Azure through OIDC with no stored credentials
 
 **Cost**
-- The Azure resources around the model stay under fifty cents a month
+- The Azure resources around the model stay under about a dollar a month
   - why: a hobby site should never produce a real bill; the model itself is about fifty cents more
-- A budget alert covers the resource group (task 2.4)
+  - Storage and hosting are a few cents; the two alerts are about 60 cents (accepted 2026-10-21)
+- A budget covers the resource group, alerting at $3 and $5 spent and a forecast over $5 (`budget.bicep`)
 - New resources state their monthly cost up front, in a comment beside them
 - A daily telemetry cap stays inside the free grant
 
 **Observability**
-- An exception in the Function App raises an alert (task 2.5)
+- Failures and the global cap raise email alerts
   - why: a failure otherwise waits for someone to look
+  - More than 10 exceptions in an hour, above what one deploy's smoke retries produce
+  - The global daily cap turning visitors away, at most one email a day
+- Log alerts run every 15 minutes, the cheapest frequency
+  - why: $0.50 a month, against $1.50 at 5 minutes; a cap reached for the rest of the day doesn't need faster news
 
 ## CI/CD (`.github/workflows/`)
 

@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Azure.Core;
+using Azure.Storage.Blobs;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Portfolio.Assistant.Core;
@@ -26,6 +28,27 @@ namespace Portfolio.Assistant.Functions
 
             return services.AddSingleton(provider =>
                 new InMemoryRateLimiter(provider.GetRequiredService<IOptions<RateLimits>>().Value, provider.GetRequiredService<TimeProvider>()));
+        }
+
+        /// <summary>Registers <see cref="BlobQuestionLog"/> from the <c>QuestionLog</c> settings.</summary>
+        /// <param name="credential">Signs in to the account named by <c>QuestionLog__BlobServiceUri</c>.</param>
+        public static IServiceCollection AddQuestionLog(this IServiceCollection services, TokenCredential credential)
+        {
+            services.AddOptions<QuestionLogOptions>()
+                .BindConfiguration("QuestionLog")
+                .Validate(
+                    options => (options.BlobServiceUri is null) != string.IsNullOrEmpty(options.ConnectionString),
+                    "Set exactly one of QuestionLog:BlobServiceUri (Azure) and QuestionLog:ConnectionString (Azurite).")
+                .ValidateOnStart();
+
+            return services.AddSingleton<IQuestionLog>(provider =>
+            {
+                var options = provider.GetRequiredService<IOptions<QuestionLogOptions>>().Value;
+                var container = options.BlobServiceUri is { } address
+                    ? new BlobServiceClient(address, credential).GetBlobContainerClient(BlobQuestionLog.ContainerName)
+                    : new BlobContainerClient(options.ConnectionString, BlobQuestionLog.ContainerName);
+                return new BlobQuestionLog(container);
+            });
         }
     }
 }

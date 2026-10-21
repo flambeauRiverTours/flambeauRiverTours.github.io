@@ -44,6 +44,18 @@ jobs:
           restore-keys: nuget-${{ runner.os }}-
       - run: dotnet restore Portfolio.Assistant.slnx
       - run: dotnet build Portfolio.Assistant.slnx --no-restore
+      # the question log's blob test runs against Azurite; with CI set it fails, rather than skips, without one
+      - name: Start Azurite
+        run: |
+          npx --yes --package=azurite@3.37.0 azurite-blob --silent --skipApiVersionCheck --location "$RUNNER_TEMP/azurite" &
+          for _ in $(seq 1 30); do
+            if (echo > /dev/tcp/127.0.0.1/10000) 2>/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::Azurite never started"
+          exit 1
       - run: dotnet test Portfolio.Assistant.slnx --no-build
       - run: dotnet format Portfolio.Assistant.slnx --verify-no-changes --no-restore
       - name: No vulnerable packages
@@ -105,11 +117,12 @@ jobs:
         env:
           RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP_NAME }}
           FOUNDRY_ACCOUNT: ${{ vars.FOUNDRY_ACCOUNT_NAME }}
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
         run: |
           az deployment group what-if \
             --resource-group "$RESOURCE_GROUP" \
             --template-file infra/main.bicep \
-            --parameters foundryAccountName="$FOUNDRY_ACCOUNT"
+            --parameters foundryAccountName="$FOUNDRY_ACCOUNT" alertEmail="$ALERT_EMAIL"
 
   infra:
     if: github.event_name != 'pull_request'
@@ -130,12 +143,13 @@ jobs:
         env:
           RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP_NAME }}
           FOUNDRY_ACCOUNT: ${{ vars.FOUNDRY_ACCOUNT_NAME }}
+          ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
         run: |
           az deployment group create \
             --name "api-${{ github.run_number }}" \
             --resource-group "$RESOURCE_GROUP" \
             --template-file infra/main.bicep \
-            --parameters foundryAccountName="$FOUNDRY_ACCOUNT" \
+            --parameters foundryAccountName="$FOUNDRY_ACCOUNT" alertEmail="$ALERT_EMAIL" \
             -o json > out.json
           for key in functionAppName functionAppUrl; do
             echo "$key=$(jq -r ".properties.outputs.$key.value" out.json)" >> "$GITHUB_OUTPUT"
