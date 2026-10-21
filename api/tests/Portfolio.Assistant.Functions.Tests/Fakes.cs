@@ -1,5 +1,7 @@
 ﻿using System.Net;
+using System.Net.Sockets;
 using System.Text;
+using Azure.Core;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Portfolio.Assistant.Core;
@@ -103,6 +105,63 @@ namespace Portfolio.Assistant.Functions.Tests
         {
             await Task.Delay(Timeout.Infinite, cancellationToken);
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Hands out a token at once, so a test reaches the network without signing in.
+    /// </summary>
+    internal sealed class FixedTokenCredential : TokenCredential
+    {
+        public override AccessToken GetToken(TokenRequestContext requestContext, CancellationToken cancellationToken) =>
+            new("test-token", DateTimeOffset.UtcNow.AddHours(1));
+
+        public override ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken) =>
+            ValueTask.FromResult(GetToken(requestContext, cancellationToken));
+    }
+
+    /// <summary>
+    /// Accepts connections on a local port and never answers, as a hung storage endpoint behaves.
+    /// </summary>
+    internal sealed class SilentServer : IDisposable
+    {
+        private readonly TcpListener listener = new(IPAddress.Loopback, 0);
+        private readonly List<TcpClient> held = [];
+
+        public SilentServer()
+        {
+            listener.Start();
+            _ = HoldConnectionsAsync();
+        }
+
+        public int Port => ((IPEndPoint)listener.LocalEndpoint).Port;
+
+        public void Dispose()
+        {
+            listener.Stop();
+            lock (held)
+            {
+                held.ForEach(client => client.Dispose());
+            }
+        }
+
+        private async Task HoldConnectionsAsync()
+        {
+            try
+            {
+                while (true)
+                {
+                    var client = await listener.AcceptTcpClientAsync();
+                    lock (held)
+                    {
+                        held.Add(client);
+                    }
+                }
+            }
+            catch (Exception error) when (error is SocketException or ObjectDisposedException)
+            {
+                // stopped
+            }
         }
     }
 

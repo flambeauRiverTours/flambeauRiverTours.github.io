@@ -34,7 +34,7 @@ namespace Portfolio.Assistant.Functions
             withDeadline.CancelAfter(deadline);
             try
             {
-                return await AdmitBeforeAsync(visitorAddress, withDeadline.Token);
+                return await AdmitWithinDeadlineAsync(visitorAddress, withDeadline.Token);
             }
             catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
@@ -45,7 +45,7 @@ namespace Portfolio.Assistant.Functions
         /// <inheritdoc />
         public void Dispose() => gate.Dispose();
 
-        private async Task<RateLimitDecision> AdmitBeforeAsync(string visitorAddress, CancellationToken cancellationToken)
+        private async Task<RateLimitDecision> AdmitWithinDeadlineAsync(string visitorAddress, CancellationToken cancellationToken)
         {
             await gate.WaitAsync(cancellationToken);
             try

@@ -1,4 +1,4 @@
-﻿using Azure.Identity;
+﻿using Azure.Storage.Blobs;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,6 +8,9 @@ namespace Portfolio.Assistant.Functions.Tests
 {
     public class StorageRegistrationTests
     {
+        // Azurite's published development key, not a secret
+        private const string AzuriteKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
+
         private static ServiceProvider Services(params (string Key, string Value)[] settings)
         {
             var configuration = new ConfigurationBuilder()
@@ -15,7 +18,7 @@ namespace Portfolio.Assistant.Functions.Tests
                 .Build();
             return new ServiceCollection()
                 .AddSingleton<IConfiguration>(configuration)
-                .AddStorage(new AzureCliCredential())
+                .AddStorage(new FixedTokenCredential())
                 .AddQuestionLog()
                 .AddRateLimiting()
                 .BuildServiceProvider();
@@ -33,14 +36,24 @@ namespace Portfolio.Assistant.Functions.Tests
             services.GetRequiredService<IDailyCountStore>().Should().BeOfType<BlobDailyCountStore>();
         }
 
-        // Azure.Core's defaults (100 s an attempt, 3 retries) could hold a visitor's request, and the rate limiter's lock, for minutes
-        [Fact]
-        public void Storage_calls_give_up_within_seconds()
+        // Azure.Core's defaults (100 s an attempt, 3 retries) could hold a visitor's request, and the rate limiter's lock, for minutes.
+        // Both ways AddStorage builds a client are pointed at a server that accepts connections and never answers
+        [Theory]
+        [InlineData("Storage:ConnectionString")]
+        [InlineData("Storage:BlobServiceUri")]
+        public async Task Storage_calls_from_the_registered_client_give_up_within_seconds(string key)
         {
-            var retry = ServiceCollectionExtensions.StorageClientOptions().Retry;
+            using var silent = new SilentServer();
+            var setting = key == "Storage:ConnectionString"
+                ? $"DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey={AzuriteKey};BlobEndpoint=http://127.0.0.1:{silent.Port}/devstoreaccount1;"
+                : $"https://127.0.0.1:{silent.Port}/";
+            using var services = Services((key, setting));
+            var call = services.GetRequiredService<BlobServiceClient>().GetBlobContainerClient("any").ExistsAsync(TestContext.Current.CancellationToken);
 
-            retry.NetworkTimeout.Should().BeLessThanOrEqualTo(TimeSpan.FromSeconds(3));
-            retry.MaxRetries.Should().BeLessThanOrEqualTo(1);
+            var finished = await Task.WhenAny(call, Task.Delay(TimeSpan.FromSeconds(15), TestContext.Current.CancellationToken));
+
+            finished.Should().BeSameAs(call, "a 3 s timeout with one retry gives up in about 6 s");
+            await FluentActions.Awaiting(() => call).Should().ThrowAsync<Exception>();
         }
 
         public static TheoryData<(string, string)[]> NeitherOrBoth => new()

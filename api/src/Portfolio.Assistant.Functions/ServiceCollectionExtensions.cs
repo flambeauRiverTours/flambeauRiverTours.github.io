@@ -10,7 +10,8 @@ namespace Portfolio.Assistant.Functions
     /// <summary>Registers the Function's own services.</summary>
     internal static class ServiceCollectionExtensions
     {
-        // well inside the drawer's 35 s wait, and a few storage attempts with StorageClientOptions' 3 s timeout
+        // well inside the drawer's 35 s wait; a storage attempt that hangs uses 3 s of it, so its retry gets only what's left
+        // (about 1.8 s), and the deadline, not the retry policy, decides when a hung admit gives up
         private static readonly TimeSpan AdmitDeadline = TimeSpan.FromSeconds(5);
 
         /// <summary>Loads the knowledge files now and shares them as one <see cref="KnowledgeBase"/>.</summary>
