@@ -6,14 +6,14 @@ import { useEffect, useState } from "react";
  * @returns The id of the section nearest the top of the viewport
  */
 export function useActiveSection(ids: string[]): string {
-    const [activeId, setActiveId] = useState(ids[0]);
+    const [activeId, setActiveId] = useState(ids[0] ?? "");
 
     useEffect(() => {
         //a section counts as active once its top passes the upper third of the viewport
         const observer = new IntersectionObserver((entries) => {
-            const visible = entries.filter((entry) => entry.isIntersecting);
-            if (visible.length) {
-                setActiveId(visible[0].target.id);
+            const firstVisible = entries.find((entry) => entry.isIntersecting);
+            if (firstVisible) {
+                setActiveId(firstVisible.target.id);
             }
         }, { rootMargin: "-30% 0px -65% 0px" });
 

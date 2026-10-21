@@ -27,7 +27,7 @@ export function htmlToText(html: string): string {
         .replace(/<\/dt>\s*<dd[^>]*>/gi, ": ")
         .replace(/<\/p>/gi, "\n\n")
         .replace(/<[^>]+>/g, "")
-        .replace(/&(amp|lt|gt|quot|#x27);/g, (entity) => entities[entity]);
+        .replace(/&(amp|lt|gt|quot|#x27);/g, (entity) => entities[entity] ?? entity);
     return text
         .split("\n")
         .map((line) => line.trim())

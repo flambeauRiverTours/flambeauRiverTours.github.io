@@ -55,7 +55,7 @@ scripts/
   - [x] **0.5b Answer the 8 new logistics questions** (You): remote start before the move, on-call or weekend work, take-home assignments, other interviews or offers, background check or drug test, part-time, hourly contract rate, commuting outside Charlotte. They're marked `TODO` in `faq.md`. Answered, with 17 eval cases covering them (`logi-*`, plus traps for invented offers, company names, interview stages and background-check results)
   - [x] **0.5c "About this assistant" section** in `faq.md`, so the assistant can answer honestly about AI, storage (90 days), IP addresses, Microsoft Azure and deletion. These claims must stay true: tasks 2.1, 2.2 and 3.5 implement them. `scripts/faq.test.ts` checks the section exists and fails once the Berlin answers go out of date (January 2027)
 - [x] **0.6 `api/knowledge/system-prompt.md`** (version 1, draft for your review): 12 numbered rules (knowledge only, "not on the site, email Jack" otherwise, correct false premises and treat visitor claims as unverified, third person, 1–4 plain sentences, Jack-only topics, no ratings, no commitments, no salary numbers or private details, no political or social views, professional tone with no profanity, ignore rule-changing instructions and no memory between visitors) plus 3 examples, ending with the `Links:` line format
-- [x] **0.7 Eval set `api/evals/questions.jsonl`**: 336 cases across 16 categories (50 trap including behavioral-interview and confidential-employer questions, 39 jailbreak including injected claims and social engineering, 25 sensitive covering politics, harassment and a violent request (added by 2.3), 17 privacy including discriminatory questions, 58 FAQ including questions about the assistant and logistics, 39 fact, 22 numbers, plus multi-hop, multi-turn, robustness, opinion, commitment, off-topic, meta, links, personal)
+- [x] **0.7 Eval set `api/evals/questions.jsonl`**: 337 cases across 16 categories (50 trap including behavioral-interview and confidential-employer questions, 39 jailbreak including injected claims and social engineering, 25 sensitive covering politics, harassment and a violent request (added by 2.3), 17 privacy including discriminatory questions, 59 FAQ including questions about the assistant and logistics, 39 fact, 22 numbers, plus multi-hop, multi-turn, robustness, opinion, commitment, off-topic, meta, links, personal)
   - Format, grading rules and the checks applied to every answer (links line, plain text, no URLs, length, no salary figures, known fabrications such as CKAD or "Microsoft Certified", profanity) are in `api/evals/README.md`
   - Link grading: refusals must end with `Links: none`; a link score (recall and extra links) is reported alongside the pass rate
   - 130 high-risk cases have a `passExample`, a good answer the test checks against the case's own patterns. Adding them caught 14 patterns that would have failed correct denials
@@ -163,31 +163,81 @@ scripts/
 
 ## Phase 3: UI (≈ 1 day)
 
-- [ ] **3.1 API client `src/assistant/askAssistant.ts`**
-  - `VITE_ASSISTANT_API_URL` in `.env.production` (the deployed Function URL, not a secret) and `.env.development` (`http://localhost:7071`).
-  - `ask(question, history, signal)` returns a discriminated union: `{ kind: "answer", answer, links } | { kind: "rateLimited", retryAfterSeconds } | { kind: "unavailable" }`. Client timeout 25 s via `AbortController`.
-  - `warmUp()`: fire-and-forget `GET /api/health`.
-- [ ] **3.2 Opening the drawer: the `#ask` hash**
+**Prepared 2026-10-21.** What the site's code showed:
+- **A push to `main` deploys the site at once** (`deploy.yml`), so the assistant must stay hidden until the soft launch (4.8). Gate: the entry points render only when `VITE_ASSISTANT_API_URL` is set. `.env.production` doesn't get it until 4.8, and until then the drawer is an unused lazy chunk. The About sentence's link is added in 4.8 too (it lives in `FullPageData`, which the knowledge build reads in Node, with no Vite env).
+- **No DOM tests exist yet.** Vitest runs only `scripts/*.test.ts(x)` in Node. Pure logic is tested in Node; components need `jsdom`, `@testing-library/react` and `@testing-library/user-event` (dev dependencies only), with a per-file `// @vitest-environment jsdom`.
+- **History must be trimmed.** An answer can run to 400 tokens (about 1,600+ characters), but the API rejects history messages over 1,500 characters and more than 4 turns. Without trimming, a follow-up after a long answer gets a 400.
+- **The 25 s timeout was too short.** The server allows up to 30 s (two 12 s attempts plus overhead) before a cold start. The client waits 35 s.
+- **Bundle baseline** (`npm run build`, 2026-10-21): main JS 194.86 kB (65.33 kB gzip), CSS 228.57 kB (31.76 kB gzip). `Offcanvas` is already in the main bundle through `HeaderBar`.
+- **Order:** 3.1 → 3.2 → 3.4 (the drawer, built against `func start` locally) → 3.3 → 3.5 → 3.6, then the browser check. Each step is test-first where it has logic. Each ends with the simplification and standards pass, and with `npm test`, `npm run lint` and `npm run build`.
+
+**Built 2026-10-21** (uncommitted). 92 site tests (56 new), `tsc`, lint and build pass. Changes from the plan:
+- `ask` returns a fourth result, `cancelled`, when the visitor closes the drawer mid-question. The drawer drops that turn and puts the question back in the box.
+- Long waits read "in about N hours", not "tomorrow": midnight UTC is evening in the US, so "tomorrow" would be wrong there.
+- `AbortSignal.any` isn't in TypeScript 5.4's DOM types, so one `AbortController` combines the timeout and the visitor's cancel.
+- `assistantApiUrl` has its own module, so the page can check it without pulling the API client out of the drawer's chunk.
+- The cross-file checks (the limits against `AskRequestValidator.cs`, the privacy note against `faq.md`) live in `scripts/`, like the other Node checks, and read files with `?raw`. Each was seen failing on a deliberate mismatch.
+- `vite.config.ts` stops the dev server watching `api/`: Visual Studio's locked files under `api/.vs` crashed it.
+- Found in the browser check and fixed, with a regression test: the spinner was a `<div>` inside a `<p>` (React warned), and the privacy page had no background, so it rendered dark-on-dark under a dark colour scheme.
+
+**Browser check** (2026-10-21, against `func start` and Azurite; three real questions, well under a cent):
+- Desktop (1280 px): the sidebar link opens the drawer beside the page with no backdrop; a starter got a real answer and link; the link jumped the page and left the drawer open.
+- Phone (375 px): `/#ask` and the header icon open a full-width drawer with a backdrop and focus the input; a link closes the drawer first, then jumps to the entry just below the header.
+- Keyboard only: Tab reaches "Ask a question", Enter opens it, Enter sends, Escape closes.
+- States: `Limits__PerMinute=1` gave "Try again in a minute, or email Jack"; with the API stopped, "unavailable" with the email and resume links. No horizontal scroll at either width.
+- Production build (no API address): no entry points, no footer privacy link, `/#ask` does nothing, and the drawer's chunk is never downloaded.
+- **Bundle:** the drawer is its own chunk (5.81 kB JS, 2.52 kB gzip; 1.47 kB CSS). Main JS is 198.20 kB (66.70 kB gzip), **+3.34 kB (+1.37 kB gzip)** over the baseline, and CSS +0.47 kB. That misses the 1 kB target in "Done when": the entry points, their chat icon (its SVG path is about 1.1 kB), the `#ask` hook and the lazy loader have to load with the page. Accepted as the cost of the entry points rather than trimmed further.
+- Not checked: the deployed API (waits for 1.11), and the CORS for `localhost:5173` (the preview tool couldn't get that port, so the check ran on 5175 with `func start --cors`).
+
+**Checked against FantasyFootball's front-end standards** (2026-10-21; now adopted in `docs/standards.md`). Fixed, test-first where behaviour changed:
+1. **Axe**: `src/App.axe.test.tsx` checks the whole page, desktop and phone, with the drawer closed, empty, waiting, answered, rate-limited and unavailable, and with the phone menu open (13 tests). It found three problems, each shown failing before its fix:
+   - The drawer's notice was a second `<footer>` landmark; it's now a `div`.
+   - The phone menu button's `aria-controls` named a menu that isn't in the page until it opens. This predates Phase 3.
+   - A test query matched the page's own SPIE text; it's now scoped to the drawer.
+2. **`noUncheckedIndexedAccess`** is on, and `npm run build` now runs `tsc --noEmit` first, so the deploy type-checks. It found 7 errors (4 older). One was a real bug: a reply with no waiting question would overwrite the last answer. The new reducer test failed first.
+3. **`!` assertions**: `Sidebar` now narrows a local `onNavigate`, which removes both uncommented `!`s and the duplicated handler.
+4. **Captured responses**: the client and axe tests use real 200, 400, 429 and 503 bodies from `func start` (`src/testing/capturedResponses.ts`). Renaming a captured field fails the client tests.
+7. **Doc comments**: `ask`'s summary and `useAskHash`'s `open` parameter no longer restate their signatures.
+- Recorded instead: the drawer's own stylesheet, as an exception in the standards. Left for 4.6: Prettier and the npm checks.
+
+- [x] **3.1 API client `src/assistant/askAssistant.ts`**
+  - `VITE_ASSISTANT_API_URL` in `.env.development` (`http://localhost:7071`, committed). `.env.production` gets the deployed URL in 4.8, from 1.11's `functionAppUrl` output. It isn't a secret. `vite-env.d.ts` declares it.
+  - `ask(question, history, { signal, fetch })` returns a discriminated union: `{ kind: "answer", answer, links } | { kind: "rateLimited", retryAfterSeconds } | { kind: "unavailable" }`. `fetch` is injectable, so tests need no network.
+  - Mapping, test-first in Node:
+    - 200 → answer.
+    - 429 → `retryAfterSeconds` from the body, falling back to the `Retry-After` header.
+    - 400 → unavailable, logged to the console. The UI never sends an invalid request, so a 400 is a client bug.
+    - 503, any other status, a network error, unreadable JSON or a 35 s timeout → unavailable.
+    - The visitor's own abort (closing the drawer) → no result at all.
+  - `warmUp()`: a fire-and-forget `GET /api/health` that never throws.
+- [x] **3.1b Conversation state `src/assistant/conversation.ts`** (pure, test-first in Node)
+  - A reducer over turns: `asked`, `answered`, `failed`.
+  - `historyFor(turns)` sends at most the last 4 answered turns, each message cut to 1,500 characters. Failed turns are left out.
+  - `waitText(seconds)` gives "in N minutes", or "tomorrow" when the wait runs past midnight UTC (the daily and global caps).
+  - A test pins the limits to the API's: 500 for a question, 4 turns, 1,500 per message.
+- [x] **3.2 Opening the drawer: the `#ask` hash**
   - All three entry points are plain links to `#ask`, including the one inside `FullPageData`'s JSX, which can't call React state.
   - `App.tsx` listens for `hashchange` and checks the hash on load: `#ask` → open the drawer and `history.replaceState` back to the previous hash, so Back still works. `jacktreadwell.com/#ask` becomes a shareable link that opens the assistant.
-  - `useActiveSection` only watches section IDs, so `#ask` shouldn't affect it. Check.
-- [ ] **3.3 Entry points**
-  - `Sidebar.tsx`: an "Ask a question" button below the section links, with a chat-bubble icon as an inline SVG path (as `LinkIconsItem` does), styled as an outlined action rather than a nav item.
-  - `HeaderBar.tsx`: an icon button to the left of the menu toggle, `aria-label="Ask a question"`.
-  - `FullPageData.tsx` About contact sentence: "…email me, reach out on LinkedIn, or `<a href="#ask">`ask my assistant`</a>` a quick question." Then rerun `build:knowledge`.
-- [ ] **3.4 Drawer `src/assistant/AssistantDrawer.tsx`** (loaded with `React.lazy` and mounted only after the first open, so the main bundle doesn't grow)
+  - `useActiveSection` only watches section IDs, so `#ask` doesn't affect it (checked: it observes the given IDs only). `App.tsx`'s initial-load effect looks up `#ask` as an element, finds none, and does nothing.
+  - Built as a hook, `useAskHash(open)`, tested in jsdom: `#ask` on load opens the drawer; a later `hashchange` to `#ask` opens it; either way the hash is replaced, so Back doesn't reopen it.
+- [x] **3.3 Entry points** (all hidden while `VITE_ASSISTANT_API_URL` is unset)
+  - `Sidebar.tsx`: an "Ask a question" link to `#ask` below the section links, with a chat-bubble icon as an inline SVG path (as `LinkIconsItem` does), styled as an outlined action rather than a nav item. In the phone menu it closes the menu first, through the existing `onNavigate`.
+  - `HeaderBar.tsx`: an icon link to the left of the menu toggle, `aria-label="Ask a question"`.
+  - Moved to 4.8: the `FullPageData.tsx` About sentence ("…or `<a href="#ask">`ask my assistant`</a>` a quick question"), then `build:knowledge`.
+- [x] **3.4 Drawer `src/assistant/AssistantDrawer.tsx`** (loaded with `React.lazy` and mounted only after the first open, so the main bundle doesn't grow)
   - `Offcanvas placement="end"`, titled "Ask about Jack's experience". About 420px wide on desktop, full width on phones.
   - Desktop (≥ 1000px, the existing `collapseWidth`): `backdrop={false}` and `scroll`, so the page stays usable beside the drawer. Phone: the normal modal drawer.
-  - Empty state: three starter-question buttons; clicking one sends it.
-  - Conversation: question and answer bubbles. Answer text is rendered as plain text, never with `dangerouslySetInnerHTML`. The last 4 turns go to the API as `history`. State lives only in memory and is gone on reload.
-  - Input: single line, `maxLength={500}`, a character counter from 400 characters, Enter sends, disabled while waiting.
+  - Empty state: three starter-question buttons; clicking one sends it. Approved 2026-10-21, each worded exactly as an eval case: "What is Jack working on at SPIE?" (`spie-project`), "What roles did Jack have at Epic?" (`epic-roles`), "When could Jack start a new position?" (`start-new-position`, added for this). All three passed 3 of 3 on prompt `69ff285cb0e3` (`results/reruns/…-starters.md`).
+  - Conversation: question and answer bubbles. Answer text is rendered as plain text, never with `dangerouslySetInnerHTML`, with `white-space: pre-line` for its line breaks. `historyFor` (3.1b) builds `history`. State lives only in memory and is gone on reload; closing the drawer keeps it, and aborts a question still waiting.
+  - Input: single line, `maxLength={500}`, a character counter from 400 characters, Enter sends, disabled while waiting. A blank question doesn't send.
+  - Tests in jsdom, with a fake `ask`: a starter question sends and shows the answer and its links; a 429 shows the wait; unavailable shows the email and resume links; input is disabled while waiting; the answer region is `aria-live`; answer text containing `<b>` shows as literal text.
   - Waiting: "Thinking…" with a spinner. After 8 s: "Still thinking, the assistant may be waking up."
   - Links under each answer, as buttons like "See: Experience › Epic Systems, Team Lead". Desktop: set `location.hash` and keep the drawer open. Phone: close the drawer, then set the hash in `onExited`, using the same pattern as `HeaderBar`'s `pendingId`.
   - Rate limited: "You've reached the question limit for now. Try again in N minutes, or email Jack." Unavailable: "The assistant is unavailable right now." Both show email and resume links.
   - Footer, always visible: "AI-generated from this site. It can be wrong, so check the resume." · "Questions and answers are stored for 90 days to improve this assistant. Don't include personal information." · [Privacy](/privacy.html) · "Prefer a human? Email me."
   - Accessibility: focus the input on open, answers in an `aria-live="polite"` region, a label on every button, Escape closes (the Offcanvas default).
   - Call `warmUp()` on open.
-- [ ] **3.5 Privacy note `public/privacy.html`** (a short static page with the site's fonts and colours). It covers:
+- [x] **3.5 Privacy note `public/privacy.html`** (a short static page with the site's fonts and colours). It covers:
   - what's stored (question, answer, timing) and why
   - "IP addresses aren't stored. They're held in memory only for rate limiting and forgotten at midnight UTC." (matches `faq.md`, corrected 2026-10-21 after the 2.1 redesign dropped the hash)
   - deletion after 90 days
@@ -196,14 +246,15 @@ scripts/
   - that only Jack can read the stored questions
   - The same facts are in the "About this assistant" section of `faq.md`, so the assistant and the privacy note must say the same thing. Change both together
 
-  Linked from the drawer and the footer.
-- [ ] **3.6 Styles** in `src/assistant/AssistantDrawer.scss`, using the existing Bootstrap variables (`$secondary`, `$link-color`, Inter).
-- **Done when:** a browser check at desktop and phone widths shows:
-  - all three entry points open the drawer
+  Linked from the drawer and the site footer (the footer link hidden with the entry points). A Vitest check in Node reads `privacy.html` and `faq.md` and fails unless both state the 90 days, the midnight-UTC forgetting of addresses, and the deletion email, so the two can't drift.
+- [x] **3.6 Styles** in `src/assistant/AssistantDrawer.scss`, using the existing Bootstrap variables (`$secondary`, `$link-color`, Inter). Imported by the drawer, so it lands in the lazy chunk's CSS, not the main stylesheet.
+- **Done when:** a browser check against `func start` and Azurite, at desktop and phone widths, shows:
+  - both entry points and a `/#ask` link open the drawer
   - a starter question gets an answer with working links
-  - the error and limit states look right (forced with a bad API URL and low limits)
+  - the error and limit states look right (forced with a bad API URL and `Limits__PerMinute=1`)
   - no horizontal scroll, and keyboard-only use works
-  - the main bundle size is unchanged, because the drawer is a separate chunk
+  - the drawer is a separate chunk, and the main bundle grows only by the entry points (planned as within 1 kB; it was 1.37 kB gzipped, see above)
+  - with `VITE_ASSISTANT_API_URL` unset, `npm run build` shows no entry points
 
 ## Phase 4: tune and launch (≈ 0.5–1 day)
 
@@ -221,8 +272,9 @@ scripts/
   - `kv-portfolio-ai-flambeau`, after checking which secrets it holds
   - `myGitHubDeployIdentity`'s Website Contributor assignment on the old app
 - [ ] **4.6 CI for the site** (new `.github/workflows/ci.yml` on pull requests and pushes): `npm ci`, `npm run lint`, `npm run build`, then `npm run build:knowledge && git diff --exit-code api/knowledge`, so the assistant's knowledge can't drift from the page. Also from the Phase 1 review: `npm audit --omit=dev` (the npm half of the vulnerable-package standard), and pin `deploy.yml`'s actions to commit SHAs (they're on tags like `@v4`, against the CI standard). Otherwise `deploy.yml` stays as it is.
+  - From the front-end standards (adopted 2026-10-21): `npm test` in CI, Prettier (`format:check` in CI, after one reformatting commit of the whole site), the 125 KB gzipped budget for initial JavaScript, and an automated licence check against the allow list. `npm audit --omit=dev` currently flags one moderate issue, `@babel/runtime` through `react-bootstrap`, so that comes first.
 - [ ] **4.7 Eval workflow** (`.github/workflows/evals.yml`, on `workflow_dispatch` and on changes to `api/knowledge/**`): runs the eval runner through OIDC (the deploy identity needs Foundry User for this) and uploads the report. Fails if the launch bar isn't met.
-- [ ] **4.8 Soft launch.** Deploy the site with the entry points. Read the logs daily for the first week, then weekly, and add every wrong answer to `questions.jsonl`.
+- [ ] **4.8 Soft launch.** Deploy the site with the entry points: set `VITE_ASSISTANT_API_URL` in `.env.production` to 1.11's `functionAppUrl`, and add the About sentence's `#ask` link (moved from 3.3), then rerun `build:knowledge`. Read the logs daily for the first week, then weekly, and add every wrong answer to `questions.jsonl`.
 - [ ] **4.9 Write-up** (optional): a short "how I built it" for the Projects section, like Fantasy Football's (model chosen by evals, cost caps, privacy).
 - **Done when:** the committed eval report meets the launch bar, key auth is off, the old resources are deleted, and CI is green.
 
@@ -231,5 +283,6 @@ scripts/
 - Done: 2.2 Azurite installed, 2.3 probe approved, 2.4 $5 budget with a $3 warning, 2.5 global-cap log alert
 - 1.11 + 2.5 Add the `ALERT_EMAIL` repo secret, then commit and push for the first deploy (`FOUNDRY_ACCOUNT_NAME` is set)
 - 2.4 Deploy `budget.bicep` once (command in `api/README.md`)
+- Done: 3.x DOM test tooling, the launch gate, the starter questions (2026-10-21)
 - 4.4 Turn off key auth
 - 4.5 Delete the old resources (permanent)

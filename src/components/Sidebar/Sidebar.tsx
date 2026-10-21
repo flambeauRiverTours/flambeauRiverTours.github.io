@@ -5,9 +5,13 @@ import Stack from "react-bootstrap/Stack";
 import React from "react";
 import "./Siderbar.scss"
 import LinkIconsItem from "./LinkIconsItem";
+import ChatIcon from "../../assistant/ChatIcon";
 import { ISectionData, SectionGroup } from "../../datamodel/SectionData";
 
 function Sidebar(props: ISideBarInitializationProps) {
+    const { onNavigate } = props;
+    const clickHandler = (id: string) => onNavigate ? (event: React.MouseEvent) => onNavigate(id, event) : undefined;
+
     return (
         <nav className="sidebar" aria-label="Site sections">
             <Stack gap={3}>
@@ -28,11 +32,15 @@ function Sidebar(props: ISideBarInitializationProps) {
                                 href={"#" + section.id}
                                 className={"navButton" + (props.activeId === section.id ? " active" : "")}
                                 aria-current={props.activeId === section.id ? "location" : undefined}
-                                onClick={props.onNavigate ? (event) => props.onNavigate!(section.id, event) : undefined}
+                                onClick={clickHandler(section.id)}
                             >{section.buttonTitle}</a>
                         </React.Fragment>
                     })}
                 </Stack>
+                {props.showAsk ?
+                    <a href="#ask" className="askButton" onClick={clickHandler("ask")}>
+                        <ChatIcon /> Ask a question
+                    </a> : null}
             </Stack>
         </nav>);
 }
@@ -41,6 +49,7 @@ interface ISideBarInitializationProps {
     sections: ISectionData[]; //Sections of the page to link to
     activeId: string; //id of the section currently in view
     hideName?: boolean;
+    showAsk: boolean; //show the assistant's entry point; false until it launches
     onNavigate?: (id: string, event: React.MouseEvent) => void; //Optional hook to intercept link clicks (e.g. to close the mobile menu first)
 }
 

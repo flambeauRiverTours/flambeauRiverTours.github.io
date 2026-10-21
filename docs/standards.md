@@ -1,6 +1,9 @@
-# Engineering standards: the assistant API (`api/`, `infra/`)
+# Engineering standards
 
-Adopted from the FantasyFootballWebsite repository's `docs/standards.md` (sections 1, 4, 5, 6 and 7), adapted from Sleeper and the league to Foundry and the assistant. Rules that only applied there are left out. The Bicep rules also follow Microsoft's [Bicep best practices](https://learn.microsoft.com/azure/azure-resource-manager/bicep/best-practices). The front end has no standards document yet.
+Adopted from the FantasyFootballWebsite repository's `docs/standards.md`, adapted from Sleeper and the league to Foundry, the assistant and this site. Rules that only applied there are left out. The Bicep rules also follow Microsoft's [Bicep best practices](https://learn.microsoft.com/azure/azure-resource-manager/bicep/best-practices).
+
+- The assistant API (`api/`, `infra/`): sections 1, 4, 5, 6 and 7 of the original, adopted 2026-10-21
+- The site (`src/`, `scripts/`, `public/`): section 2, adopted 2026-10-21, under [Front end](#front-end-src-scripts-public) below
 
 ## Build
 
@@ -100,6 +103,82 @@ Adopted from the FantasyFootballWebsite repository's `docs/standards.md` (sectio
   - History belongs in `tasks/`, not in remarks
 - Documentation is terse and declarative
   - Summaries aim for one short line
+
+## Front end (`src/`, `scripts/`, `public/`)
+
+**TypeScript**
+- `strict` and `noUncheckedIndexedAccess` are on, and `npm run build` type-checks before it bundles
+  - why: a lookup by index or key can be undefined, and the deploy builds the site
+- Every `!` assertion has a comment explaining why
+  - Tests may use `!` without a comment
+- Prettier formats every file (task 4.6)
+  - why: style is settled by a tool, not review
+  - Until then, new code matches its file: 4 spaces and double quotes in `src/`
+
+**React**
+- Anything a visitor might share is a link: the page's sections and `#ask` are hashes
+  - why: every view becomes a shareable link
+- Controls that can't work yet are hidden, not disabled
+  - why: a control that does nothing reads as broken
+  - The assistant's entry points stay hidden until `VITE_ASSISTANT_API_URL` is set (the soft launch, task 4.8)
+- Model text is rendered as plain text, never as HTML
+  - why: an answer is untrusted input
+
+**Data**
+- All assistant requests go through `src/assistant/askAssistant.ts`
+  - why: one place owns the API origin, the timeout and the mapping of failures
+- Logic lives in pure modules, not components
+  - `conversation.ts` holds the history trimming and wait text
+  - why: pure functions test without rendering anything
+- The drawer's limits match the API's validator, checked by a test
+  - why: a request the API rejects shows the visitor "unavailable" for a drawer bug
+
+**Styling**
+- `App.scss` holds the theme and Bootstrap; each component may have its own stylesheet beside it
+  - The site predates the original's "one stylesheet" rule
+- **Exception:** the drawer has its own stylesheet, using Bootstrap's CSS variables rather than its Sass (recorded 2026-10-21)
+  - why: imported by the lazily loaded drawer, it ships in the drawer's chunk; importing the Sass would copy Bootstrap into it
+- Every page sets its own background and text colours
+  - why: a page that doesn't inherits the browser's dark scheme (the privacy page rendered dark-on-dark)
+  - The site has no dark theme; when it gets one, it is designed, not inverted
+- Layouts work from 375 pixels wide, with no horizontal scroll
+
+**Accessibility**
+- Axe checks the whole page in each state, at desktop and phone widths (`src/App.axe.test.tsx`)
+  - why: the whole page, so a new panel or state is covered without a new test
+  - Colour contrast and target size are left to the browser check: jsdom has no layout
+- The reduced-motion preference turns motion off entirely (`App.scss`)
+  - why: decorative motion has nothing worth keeping
+- Answers are announced through an `aria-live` region, and the drawer focuses its input on opening
+
+**Motion and performance**
+- Motion is decorative and never carries information
+  - The spinner always comes with "Thinking…"
+- Initial JavaScript stays under 125 KB gzipped (66.7 KB on 2026-10-21; enforced in CI by task 4.6)
+  - why: a budget catches dependency bloat before it ships
+- Features a visitor may never open load lazily, in their own chunk
+  - The drawer and the API client load on first open
+- A slow first answer says why
+  - why: a cold start can take several seconds; after 8 s the drawer says the assistant may be waking up
+
+**Testing**
+- Component tests run in jsdom (`// @vitest-environment jsdom`) and call `cleanup()` after each test
+  - why: Vitest's globals are off, so Testing Library doesn't unmount on its own
+- The API boundary is tested against real captured responses (`src/testing/capturedResponses.ts`)
+  - why: a real response catches a shape an invented one never will
+  - Invented responses cover only what the API hasn't produced: non-JSON bodies, a 500, a network error
+  - Recapture them when the API's responses change
+- Checks that read files from both halves of the repo live in `scripts/` and read them with `?raw`
+  - The limits against `AskRequestValidator.cs`, and the privacy note against `faq.md`
+- The privacy note and the FAQ make the same promises, checked by a test
+  - why: the assistant answers privacy questions from the FAQ, visitors read the note
+
+**Dependencies**
+- Licences come from FantasyFootball's allow list
+  - Anything that ships: `MIT`, `MIT-0`, `Apache-2.0`, `BSD-2-Clause`, `BSD-3-Clause`, `ISC`, `0BSD`
+  - Build and test tools also: `MPL-2.0`, `BlueOak-1.0.0`, `CC0-1.0`
+  - Checked by hand on 2026-10-21 for the Phase 3 test tools (47 new packages, all on the list); automated in task 4.6
+- A vulnerable production package fails the site's build (task 4.6)
 
 ## Infrastructure (`infra/`)
 

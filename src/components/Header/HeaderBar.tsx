@@ -6,6 +6,7 @@ import Navbar from "react-bootstrap/Navbar";
 import Offcanvas from "react-bootstrap/Offcanvas";
 import Container from "react-bootstrap/Container";
 import Sidebar from "../Sidebar/Sidebar";
+import ChatIcon from "../../assistant/ChatIcon";
 import React, { useState } from "react";
 import { ISectionData } from "../../datamodel/SectionData";
 import "./HeadBar.scss";
@@ -34,7 +35,11 @@ function HeaderBar(props: IHeaderInitializationProps) {
                     <span className="name">Jack Treadwell</span>
                     <span className="role">Senior Software Engineer</span>
                 </Navbar.Brand>
-                <Navbar.Toggle aria-controls="sectionMenu" label="Open section menu" onClick={() => setShowOffCanvas(true)} />
+                <div className="headerActions">
+                    {props.showAsk ? <a href="#ask" className="askIcon" aria-label="Ask a question" title="Ask a question"><ChatIcon /></a> : null}
+                    {/* the menu is only in the page while open, so it's only named as controlled then */}
+                    <Navbar.Toggle aria-controls={showOffcanvas ? "sectionMenu" : undefined} label="Open section menu" onClick={() => setShowOffCanvas(true)} />
+                </div>
                 <Offcanvas
                     id="sectionMenu"
                     aria-labelledby="sectionMenuLabel"
@@ -48,7 +53,7 @@ function HeaderBar(props: IHeaderInitializationProps) {
                         <Offcanvas.Title id="sectionMenuLabel">Jack Treadwell</Offcanvas.Title>
                     </Offcanvas.Header>
                     <Offcanvas.Body>
-                        <Sidebar sections={props.sections} activeId={props.activeId} hideName onNavigate={navigate}/>
+                        <Sidebar sections={props.sections} activeId={props.activeId} hideName showAsk={props.showAsk} onNavigate={navigate}/>
                     </Offcanvas.Body>
                 </Offcanvas>
             </Container>
@@ -59,6 +64,7 @@ function HeaderBar(props: IHeaderInitializationProps) {
 interface IHeaderInitializationProps{
     sections: ISectionData[]; //Sections of the page to link to
     activeId: string; //id of the section currently in view
+    showAsk: boolean; //show the assistant's entry points; false until it launches
 }
 
 export default HeaderBar;

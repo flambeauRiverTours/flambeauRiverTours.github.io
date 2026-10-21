@@ -11,7 +11,7 @@ describe("api/knowledge/system-prompt.md", () => {
     });
 
     it("names the FAQ headings as having no link ID", () => {
-        const headings = [...faqText.matchAll(/^## (.+)$/gm)].map((match) => match[1].trim()).join(", ");
+        const headings = [...faqText.matchAll(/^## (.+)$/gm)].map((match) => match[1]?.trim()).join(", ");
         expect(systemPrompt).toContain(`The FAQ headings (${headings}) have no ID`);
     });
 });
