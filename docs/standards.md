@@ -63,13 +63,17 @@ Adopted from the FantasyFootballWebsite repository's `docs/standards.md`, adapte
 - A failed model call, whatever the cause, is a 503 for the visitor and an error in the log
   - why: it isn't a fallback (nothing is retried or made up), and a sign-in failure first showed up as an unexpected type
 - Logging failures never fail a visitor's request
-- The Function runs on one instance and the rate limiter counts in its memory
-  - why: with no store, no outage can lift the cost cap, and no IP-derived data is ever written
+- The Function runs on one instance; visitors are counted in its memory, and the global daily count is stored
+  - why: no IP-derived data is ever written, and a restart or scale-to-zero can't reopen the cost cap
+  - Without the stored count, a question is refused (503), never sent uncounted
+- A client the visitor closed is a 499 with no exception
+  - why: closing the drawer isn't a failure, and the exceptions alert would count it
 
 ## Logging
 
 - Question and answer text is logged only to the 90-day blob, never to App Insights
-  - Only for requests that reached the model: `AskOutcome` gives turned-away requests no question to log
+  - Only requests that reached the model are written to the blob; turned-away ones are App Insights requests with their status code
+  - why: they carry no question, and a flood of them would fill the day's append blob (50,000 blocks)
 - IP addresses are never logged, hashed or not
 - A warning an alert searches for has its text in a constant, which the test and the alert's query both name
 
@@ -223,6 +227,8 @@ Adopted from the FantasyFootballWebsite repository's `docs/standards.md`, adapte
   - The global daily cap turning visitors away, at most one email a day
 - Log alerts run every 15 minutes, the cheapest frequency
   - why: $0.50 a month, against $1.50 at 5 minutes; a cap reached for the rest of the day doesn't need faster news
+- **Accepted gap:** when the workspace's daily ingestion cap (0.16 GB) is reached, both alerts go quiet until it resets (2026-10-21)
+  - why: another alert would cost about $0.50 a month, and the stored global count and the budget still bound the spend while they're quiet
 
 ## CI/CD (`.github/workflows/`)
 

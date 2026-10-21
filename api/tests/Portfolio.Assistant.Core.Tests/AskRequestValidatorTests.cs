@@ -78,8 +78,21 @@ namespace Portfolio.Assistant.Core.Tests
         [Fact]
         public void A_history_message_may_be_1500_characters_but_not_1501()
         {
-            Validate("Q?", new AskRequestMessage("assistant", new string('a', 1_500))).Should().BeOfType<AskValidation.Valid>();
-            DetailOf(Validate("Q?", new AskRequestMessage("assistant", new string('a', 1_501)))).Should().Contain("1,500");
+            Validate("Q?", new("user", "Hi?"), new("assistant", new string('a', 1_500))).Should().BeOfType<AskValidation.Valid>();
+            DetailOf(Validate("Q?", new("user", "Hi?"), new("assistant", new string('a', 1_501)))).Should().Contain("1,500");
         }
+
+        // the API is stateless, so assistant turns are whatever the client sends; a run of them would read to the model
+        // as its own words. Only the drawer's shape is accepted: question, answer, question, answer
+        [Theory]
+        [InlineData(0, "assistant", "user")]
+        [InlineData(1, "user", "user")]
+        [InlineData(0, "assistant", "assistant")]
+        public void History_alternates_starting_with_a_question(int index, string first, string second) =>
+            DetailOf(Validate("Q?", new(first, "One."), new(second, "Two."))).Should().Contain($"history[{index}].role");
+
+        [Fact]
+        public void History_ends_with_an_answer() =>
+            DetailOf(Validate("Q?", new AskRequestMessage("user", "Hi?"))).Should().Contain("end with an assistant message");
     }
 }

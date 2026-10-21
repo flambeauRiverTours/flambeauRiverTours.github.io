@@ -6,7 +6,7 @@ import Offcanvas from "react-bootstrap/Offcanvas";
 import Spinner from "react-bootstrap/Spinner";
 import React, { useEffect, useReducer, useRef, useState } from "react";
 import { ask as askApi, warmUp as warmUpApi } from "./askAssistant";
-import { conversationReducer, historyFor, maxQuestionLength, Turn, waitText } from "./conversation";
+import { announcementFor, conversationReducer, historyFor, maxQuestionLength, Turn, waitText } from "./conversation";
 import "./AssistantDrawer.scss";
 
 const starterQuestions = [
@@ -86,7 +86,9 @@ function AssistantDrawer({ show, onHide, modal, ask = askApi, warmUp = warmUpApi
                 <Offcanvas.Title id="assistantTitle">Ask about Jack's experience</Offcanvas.Title>
             </Offcanvas.Header>
             <Offcanvas.Body className="assistantBody">
-                <div className="conversation" aria-live="polite">
+                {/* one announcement per reply; a live conversation would also read out the visitor's own question and the waiting text */}
+                <div role="status" className="visually-hidden">{announcementFor(turns)}</div>
+                <div className="conversation">
                     {turns.length === 0 ?
                         <div className="starters">
                             <p>Curious about Jack's work, skills or job search? Try one of these:</p>

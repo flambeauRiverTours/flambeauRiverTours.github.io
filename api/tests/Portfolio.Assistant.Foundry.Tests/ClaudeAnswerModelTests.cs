@@ -63,6 +63,44 @@ namespace Portfolio.Assistant.Foundry.Tests
             (await Ask(model)).Should().Be(new ModelAnswer("Jack works at SPIE.\nLinks: experience-spie", 3900, 20));
         }
 
+        // the rules and knowledge are the same on every call and come first, so later calls read them from the cache
+        [Fact]
+        public async Task It_marks_the_system_prompt_for_caching()
+        {
+            var (model, handler) = Create(ScriptedHandler.Respond(HttpStatusCode.OK, Success));
+
+            await Ask(model);
+
+            var system = JsonDocument.Parse(handler.Sent.Single().Body).RootElement.GetProperty("system").EnumerateArray().Should().ContainSingle().Subject;
+            system.GetProperty("text").GetString().Should().Be("Rules and knowledge.");
+            system.GetProperty("cache_control").GetProperty("type").GetString().Should().Be("ephemeral");
+        }
+
+        [Fact]
+        public async Task Input_tokens_include_those_written_to_and_read_from_the_cache_which_are_also_counted_apart()
+        {
+            var (model, _) = Create(ScriptedHandler.Respond(HttpStatusCode.OK, """
+                {"id":"msg_3","type":"message","role":"assistant","model":"claude-haiku-5-5",
+                 "content":[{"type":"text","text":"Jack works at SPIE.\nLinks: experience-spie"}],
+                 "stop_reason":"end_turn","stop_sequence":null,
+                 "usage":{"input_tokens":40,"cache_creation_input_tokens":100,"cache_read_input_tokens":3760,"output_tokens":20}}
+                """));
+
+            (await Ask(model)).Should().Be(new ModelAnswer("Jack works at SPIE.\nLinks: experience-spie", 3900, 20) { CacheWriteTokens = 100, CacheReadTokens = 3760 });
+        }
+
+        [Fact]
+        public async Task An_answer_cut_off_at_the_token_limit_is_marked_truncated()
+        {
+            var (model, _) = Create(ScriptedHandler.Respond(HttpStatusCode.OK, """
+                {"id":"msg_4","type":"message","role":"assistant","model":"claude-haiku-5-5",
+                 "content":[{"type":"text","text":"Jack has worked on many projects, including"}],
+                 "stop_reason":"max_tokens","stop_sequence":null,"usage":{"input_tokens":3900,"output_tokens":400}}
+                """));
+
+            (await Ask(model)).Should().Be(new ModelAnswer("Jack has worked on many projects, including", 3900, 400) { Truncated = true });
+        }
+
         [Fact]
         public void A_model_for_a_foundry_resource_reports_its_deployment_and_signs_in_only_when_it_calls()
         {

@@ -12,13 +12,14 @@ namespace Portfolio.Assistant.Core.Tests
             "And before?",
             [new ChatMessage(ChatRole.User, "Where does Jack work?"), new ChatMessage(ChatRole.Assistant, "SPIE.")]);
 
-        private static QuestionLogEntry For(AskOutcome outcome) =>
+        private static QuestionLogEntry? For(AskOutcome outcome) =>
             QuestionLogEntry.For(outcome, "trace-1", Now, TimeSpan.FromMilliseconds(1234.6), "claude-haiku-5-5", "5b0f371dd542");
 
         [Fact]
         public void An_answer_logs_the_question_the_history_length_the_reply_its_link_ids_and_the_tokens()
         {
-            var answered = new AskOutcome.Answered(Ask, new ModelAnswer("Epic.\nLinks: experience-spie", 900, 12), new AnswerWithLinks("Epic.", [Spie]));
+            var answer = new ModelAnswer("Epic.\nLinks: experience-spie", 900, 12) { CacheReadTokens = 850, CacheWriteTokens = 0 };
+            var answered = new AskOutcome.Answered(Ask, answer, new AnswerWithLinks("Epic.", [Spie]));
 
             For(answered).Should().BeEquivalentTo(new QuestionLogEntry(Now, "trace-1", "ok", "claude-haiku-5-5", "5b0f371dd542", LatencyMs: 1235)
             {
@@ -27,8 +28,31 @@ namespace Portfolio.Assistant.Core.Tests
                 Answer = "Epic.",
                 Links = ["experience-spie"],
                 InputTokens = 900,
+                CacheReadTokens = 850,
+                CacheWriteTokens = 0,
                 OutputTokens = 12,
             });
+        }
+
+        [Fact]
+        public void An_answer_cut_off_at_the_token_limit_is_logged_as_truncated()
+        {
+            var truncated = new AskOutcome.Answered(Ask, new ModelAnswer("Jack has", 900, 400) { Truncated = true }, new AnswerWithLinks("Jack has…", []));
+
+            var entry = For(truncated);
+
+            entry!.Outcome.Should().Be("truncated");
+            entry.Answer.Should().Be("Jack has…");
+        }
+
+        [Fact]
+        public void A_question_the_visitor_left_before_the_answer_is_logged_as_cancelled()
+        {
+            var entry = For(new AskOutcome.Cancelled(Ask));
+
+            entry!.Outcome.Should().Be("cancelled");
+            entry.Question.Should().Be("And before?");
+            entry.Answer.Should().BeNull();
         }
 
         [Fact]
@@ -38,7 +62,7 @@ namespace Portfolio.Assistant.Core.Tests
 
             var entry = For(filtered);
 
-            entry.Outcome.Should().Be("filtered");
+            entry!.Outcome.Should().Be("filtered");
             entry.Question.Should().Be("And before?");
             entry.Answer.Should().Be("Sorry.");
         }
@@ -48,7 +72,7 @@ namespace Portfolio.Assistant.Core.Tests
         {
             var entry = For(new AskOutcome.ModelError(Ask));
 
-            entry.Outcome.Should().Be("model_error");
+            entry!.Outcome.Should().Be("model_error");
             entry.Question.Should().Be("And before?");
             entry.HistoryTurns.Should().Be(2);
             entry.Answer.Should().BeNull();
@@ -56,16 +80,19 @@ namespace Portfolio.Assistant.Core.Tests
             entry.InputTokens.Should().BeNull();
         }
 
-        public static TheoryData<AskOutcome, string> Refusals => new()
+        public static TheoryData<AskOutcome> TurnedAway => new()
         {
-            { new AskOutcome.Invalid("question is required."), "invalid" },
-            { new AskOutcome.RateLimited(55), "rate_limited" },
+            new AskOutcome.Invalid("question is required."),
+            new AskOutcome.RateLimited(55),
+            new AskOutcome.CountFailed(),
         };
 
+        // they carry no question, and a flood of them would fill the day's append blob (50,000 blocks);
+        // App Insights already records each as a request with its status code
         [Theory]
-        [MemberData(nameof(Refusals))]
-        public void A_turned_away_request_logs_only_its_outcome_and_timing(AskOutcome outcome, string logged) =>
-            For(outcome).Should().BeEquivalentTo(new QuestionLogEntry(Now, "trace-1", logged, "claude-haiku-5-5", "5b0f371dd542", LatencyMs: 1235));
+        [MemberData(nameof(TurnedAway))]
+        public void A_request_turned_away_before_the_model_isnt_logged(AskOutcome outcome) =>
+            For(outcome).Should().BeNull();
 
         [Theory]
         [InlineData("2026-10-21T14:00:00+00:00", "2026/10/21.jsonl")]
@@ -79,12 +106,13 @@ namespace Portfolio.Assistant.Core.Tests
         {
             var answered = new AskOutcome.Answered(Ask, new ModelAnswer("x", 900, 12), new AnswerWithLinks("Jack's at SPIE.\nSince 2024 – in Berlin.", [Spie]));
 
-            var line = For(answered).ToJsonLine();
+            var line = For(answered)!.ToJsonLine();
 
             line.Should().NotContain("\n").And.Contain("Jack's at SPIE.\\nSince 2024 – in Berlin.");
             JsonDocument.Parse(line).RootElement.EnumerateObject().Select(property => property.Name).Should().Equal(
-                "timestamp", "requestId", "outcome", "deployment", "promptVersion", "latencyMs", "question", "historyTurns", "answer", "links", "inputTokens", "outputTokens");
-            JsonDocument.Parse(For(new AskOutcome.RateLimited(55)).ToJsonLine()).RootElement.EnumerateObject().Should().HaveCount(6);
+                "timestamp", "requestId", "outcome", "deployment", "promptVersion", "latencyMs", "question", "historyTurns", "answer", "links",
+                "inputTokens", "cacheReadTokens", "cacheWriteTokens", "outputTokens");
+            JsonDocument.Parse(For(new AskOutcome.ModelError(Ask))!.ToJsonLine()).RootElement.EnumerateObject().Should().HaveCount(8);
         }
     }
 }

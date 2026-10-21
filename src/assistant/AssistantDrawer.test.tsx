@@ -10,6 +10,9 @@ import { stubMatchMedia } from "../testing/stubMatchMedia";
 const spie = { id: "experience-spie", label: "Experience › Senior Software Engineer" };
 const starter = "What is Jack working on at SPIE?";
 
+//what's on screen, not the screen-reader announcement that repeats the latest reply
+const shown = { ignore: ".visually-hidden" };
+
 type FakeAsk = (question: string, history: HistoryMessage[], options?: AskOptions) => Promise<AskResult>;
 
 function replying(result: AskResult) {
@@ -51,7 +54,7 @@ describe("AssistantDrawer", () => {
         await userEvent.click(screen.getByRole("button", { name: starter }));
 
         expect(ask).toHaveBeenCalledWith(starter, [], expect.objectContaining({ signal: expect.any(AbortSignal) }));
-        expect(await screen.findByText("Jack is migrating a large .NET app.")).toBeTruthy();
+        expect(await screen.findByText("Jack is migrating a large .NET app.", shown)).toBeTruthy();
         expect(screen.getByRole("button", { name: "See: Experience › Senior Software Engineer" })).toBeTruthy();
     });
 
@@ -61,7 +64,7 @@ describe("AssistantDrawer", () => {
         const input = screen.getByRole("textbox", { name: "Your question" });
 
         await userEvent.type(input, "Where does Jack work?{Enter}");
-        await screen.findByText("SPIE.");
+        await screen.findByText("SPIE.", shown);
         await userEvent.type(input, "Since when?{Enter}");
 
         expect(ask).toHaveBeenLastCalledWith("Since when?", [{ role: "user", content: "Where does Jack work?" }, { role: "assistant", content: "SPIE." }], expect.anything());
@@ -81,13 +84,20 @@ describe("AssistantDrawer", () => {
 
         await userEvent.click(screen.getByRole("button", { name: starter }));
 
-        expect(await screen.findByText("<b>Bold</b> claim")).toBeTruthy();
+        expect(await screen.findByText("<b>Bold</b> claim", shown)).toBeTruthy();
     });
 
-    it("announces answers to screen readers", () => {
-        render(<Page ask={replying({ kind: "unavailable" })} />);
+    it("announces each answer once through a status region, not the whole conversation", async () => {
+        const { ask, reply } = pending();
+        render(<Page ask={ask} />);
+        const status = screen.getByRole("status");
 
-        expect(document.querySelector("[aria-live='polite']")).toBeTruthy();
+        await userEvent.click(screen.getByRole("button", { name: starter }));
+        expect(status.textContent).toBe("");
+
+        await reply({ kind: "answer", answer: "Jack is migrating a large .NET app.", links: [spie] });
+        expect(status.textContent).toBe("Jack is migrating a large .NET app.");
+        expect(document.querySelector("[aria-live]")).toBeNull();
     });
 
     it("locks the input while waiting, then frees it", async () => {
@@ -129,7 +139,7 @@ describe("AssistantDrawer", () => {
 
         await userEvent.click(screen.getByRole("button", { name: starter }));
 
-        expect(await screen.findByText(/question limit for now\. Try again in 5 minutes/)).toBeTruthy();
+        expect(await screen.findByText(/question limit for now\. Try again in 5 minutes/, shown)).toBeTruthy();
         expect(screen.getAllByRole("link", { name: /email/i }).length).toBeGreaterThan(0);
     });
 
@@ -138,7 +148,7 @@ describe("AssistantDrawer", () => {
 
         await userEvent.click(screen.getByRole("button", { name: starter }));
 
-        expect(await screen.findByText(/unavailable right now/)).toBeTruthy();
+        expect(await screen.findByText(/unavailable right now/, shown)).toBeTruthy();
         expect(screen.getByRole("link", { name: "the resume" }).getAttribute("href")).toBe("/Jack-Treadwell-Resume.pdf");
     });
 

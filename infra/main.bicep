@@ -91,6 +91,11 @@ resource storage 'Microsoft.Storage/storageAccounts@2025-01-01' = {
     resource assistantLogs 'containers' = {
       name: 'assistant-logs'
     }
+
+    // one tiny blob a day holding the global question count, so a restart can't reopen the cap
+    resource rateLimits 'containers' = {
+      name: 'rate-limits'
+    }
   }
 
   // question logs are deleted 90 days after their last write, with no cleanup code (plan, "Logging")
@@ -116,6 +121,28 @@ resource storage 'Microsoft.Storage/storageAccounts@2025-01-01' = {
                 baseBlob: {
                   delete: {
                     daysAfterModificationGreaterThan: 90
+                  }
+                }
+              }
+            }
+          }
+          {
+            name: 'delete-daily-counts-after-7-days'
+            enabled: true
+            type: 'Lifecycle'
+            definition: {
+              filters: {
+                blobTypes: [
+                  'blockBlob'
+                ]
+                prefixMatch: [
+                  '${storage::blob::rateLimits.name}/'
+                ]
+              }
+              actions: {
+                baseBlob: {
+                  delete: {
+                    daysAfterModificationGreaterThan: 7
                   }
                 }
               }
@@ -199,8 +226,8 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
           value: foundryDeployment
         }
         {
-          // written with the app's identity, through the Storage Blob Data Owner role below
-          name: 'QuestionLog__BlobServiceUri'
+          // the question log and the global count, written with the app's identity through the Storage Blob Data Owner role below
+          name: 'Storage__BlobServiceUri'
           value: storage.properties.primaryEndpoints.blob
         }
       ]

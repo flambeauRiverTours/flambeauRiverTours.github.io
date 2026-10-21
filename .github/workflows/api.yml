@@ -1,12 +1,14 @@
 name: api
 # the assistant API: test every change, preview infrastructure on pull requests, deploy from main
 on:
+  # later patterns win: the knowledge files are Markdown, but they ship with the Function (scripts/workflow-paths.test.ts)
   pull_request:
     paths:
       - 'api/**'
       - 'infra/**'
       - '.github/workflows/api.yml'
       - '!**/*.md'
+      - 'api/knowledge/**'
   push:
     branches: [main]
     paths:
@@ -14,6 +16,7 @@ on:
       - 'infra/**'
       - '.github/workflows/api.yml'
       - '!**/*.md'
+      - 'api/knowledge/**'
   workflow_dispatch:
 
 permissions:

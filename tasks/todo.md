@@ -39,6 +39,7 @@ Design, risks and decisions: `tasks/llm-assistant-plan.md`. Eval history: `tasks
   - **After the first deploy, check:**
     - Azure *appends* to `X-Forwarded-For`: six questions in a minute, each with a different forged header; the sixth gets a 429.
     - `requestId` in the question log is the App Insights trace ID.
+    - Today's count appears in `rate-limits/`, and the log shows `cacheReadTokens` on a second question within 5 minutes.
 - **Done when:** `curl` to the deployed `/api/ask` returns an answer with links; an origin that isn't allowed gets no CORS header; CI passes.
 
 ## Phase 2: guardrails and logging (done)
@@ -100,6 +101,10 @@ Design, risks and decisions: `tasks/llm-assistant-plan.md`. Eval history: `tasks
   - **A separate eval deployment** (`claude-haiku-5-5-evals`), so a 90-minute run can't take the live deployment's whole rate limit. Quota has 30 left. **Your call:** evals at 30 (about 2.5 hours a run), or production at 20 and evals at 60.
   - **Runs over an hour:** `azure/login`'s OIDC token can't renew, so in CI the runner uses `ClientAssertionCredential` with a fresh GitHub token for each renewal (tested first); locally it keeps `AzureCliCredential`.
   - **Results:** report in the job summary and as an artifact; exit 1 or 2 fails the check; CI never commits.
+- [x] PR #17 review fixes (2026-10-21, uncommitted): knowledge-only changes deploy; stored global count; IPv6 per /64; only questions logged; cancelled and truncated outcomes; system prompt cached; alternating history; one status announcement; abort fixes
+- [ ] **Grade evals through `LinkExtractor`** (PR #17 review; after 4.3, so the launch report and its grader match)
+  - Keep the raw-format checks (the `Links:` line, no URLs); run content checks and link scoring on `LinkExtractor.Extract(raw, links)`, what visitors actually see.
+  - Rerun the full set afterwards; expect a few format-only failures to turn into passes.
 - [ ] **4.8 Soft launch**
   - Set `VITE_ASSISTANT_API_URL` in `.env.production` to 1.11's `functionAppUrl`.
   - Add the About sentence's `#ask` link in `FullPageData.tsx`, then rerun `build:knowledge`.

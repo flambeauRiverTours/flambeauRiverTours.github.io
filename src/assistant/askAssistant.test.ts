@@ -74,6 +74,25 @@ describe("ask", () => {
 
         expect(await pending).toEqual({ kind: "cancelled" });
     });
+
+    it("sends nothing when the visitor has already left", async () => {
+        const visitor = new AbortController();
+        visitor.abort();
+        const fetch = serve(capturedResponses.answer);
+
+        expect(await ask("Q?", [], { apiUrl, fetch, signal: visitor.signal })).toEqual({ kind: "cancelled" });
+        expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it("stops listening to the visitor's signal once the request ends", async () => {
+        const visitor = new AbortController();
+        const added = vi.spyOn(visitor.signal, "addEventListener");
+        const removed = vi.spyOn(visitor.signal, "removeEventListener");
+
+        await ask("Q?", [], { apiUrl, fetch: serve(capturedResponses.answer), signal: visitor.signal });
+
+        expect(removed).toHaveBeenCalledWith("abort", added.mock.calls[0]?.[1]);
+    });
 });
 
 describe("warmUp", () => {

@@ -12,6 +12,8 @@ namespace Portfolio.Assistant.Foundry
     /// <remarks>
     /// Thinking is off and effort low: answers are short lookups, and Haiku 5.5 would otherwise think by default.
     /// No temperature is sent because Haiku 5.5 rejects non-default sampling parameters.
+    /// The system prompt (rules and knowledge, about 5,400 tokens) is the same on every call and comes first, so it is cached:
+    /// a write costs about 1.25 times the input price and each read within 5 minutes about a tenth.
     /// </remarks>
     public sealed class ClaudeAnswerModel : IAnswerModel
     {
@@ -67,7 +69,7 @@ namespace Portfolio.Assistant.Foundry
         {
             Model = Deployment,
             MaxTokens = MaxTokens,
-            System = prompt.System,
+            System = new List<TextBlockParam> { new() { Text = prompt.System, CacheControl = new CacheControlEphemeral() } },
             Messages = [.. prompt.Messages.Select(message => new MessageParam { Role = message.Role == ChatRole.User ? Role.User : Role.Assistant, Content = message.Content })],
             Thinking = new ThinkingConfigDisabled(),
             OutputConfig = new OutputConfig { Effort = Effort.Low },
@@ -75,15 +77,23 @@ namespace Portfolio.Assistant.Foundry
 
         private static ModelAnswer Answer(Message message)
         {
-            var input = (int)message.Usage.InputTokens;
+            // the API's input_tokens leaves out the cached tokens, which are billed too
+            var cacheRead = (int)(message.Usage.CacheReadInputTokens ?? 0);
+            var cacheWrite = (int)(message.Usage.CacheCreationInputTokens ?? 0);
+            var input = (int)message.Usage.InputTokens + cacheRead + cacheWrite;
             var output = (int)message.Usage.OutputTokens;
             if (message.StopReason == StopReason.Refusal)
             {
-                return new ModelAnswer(ModelAnswer.FilteredReply, input, output, Filtered: true);
+                return new ModelAnswer(ModelAnswer.FilteredReply, input, output, Filtered: true) { CacheReadTokens = cacheRead, CacheWriteTokens = cacheWrite };
             }
 
             var text = string.Concat(message.Content.Select(block => block.TryPickText(out var textBlock) ? textBlock.Text : ""));
-            return new ModelAnswer(text, input, output);
+            return new ModelAnswer(text, input, output)
+            {
+                Truncated = message.StopReason == StopReason.MaxTokens,
+                CacheReadTokens = cacheRead,
+                CacheWriteTokens = cacheWrite,
+            };
         }
     }
 }

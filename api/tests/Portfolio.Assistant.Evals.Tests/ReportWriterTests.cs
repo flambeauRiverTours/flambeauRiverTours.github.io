@@ -65,6 +65,16 @@ namespace Portfolio.Assistant.Evals.Tests
             Report(Result("a", Category.Fact, "SPIE."), Result("b", Category.Fact, "SPIE."))
                 .Should().Contain("2,000,000 input").And.Contain("200,000 output").And.Contain("$0.30");
 
+        // a cache read costs a tenth of the input price and a write 1.25 times it
+        [Fact]
+        public void Cached_tokens_are_reported_and_priced_apart()
+        {
+            static CaseResult Cached(string id) => new(new EvalCase(id, Category.Fact, "Q?", Expectation.Answer),
+                [new RunResult("SPIE.", new RunGrade([], LinkScore.None), 1_000_000, 100_000) { CacheReadTokens = 800_000, CacheWriteTokens = 100_000 }]);
+
+            Report(Cached("a"), Cached("b")).Should().Contain("2,000,000 input (1,600,000 read from the cache, 200,000 written to it)").And.Contain("$0.16");
+        }
+
         [Fact]
         public void The_link_score_is_reported() =>
             Report(Result("a", Category.Fact, "SPIE.")).Should().Contain("Expected links present: 1 / 1").And.Contain("Extra links per answer: 1.0");

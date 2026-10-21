@@ -13,7 +13,7 @@ namespace Portfolio.Assistant.Functions.Tests
             var configuration = new ConfigurationBuilder()
                 .AddInMemoryCollection(settings.Select(setting => KeyValuePair.Create<string, string?>(setting.Key, setting.Value)))
                 .Build();
-            return new ServiceCollection().AddSingleton<IConfiguration>(configuration).AddRateLimiting().BuildServiceProvider();
+            return new ServiceCollection().AddSingleton<IConfiguration>(configuration).AddSingleton<IDailyCountStore>(new MemoryDailyCountStore()).AddRateLimiting().BuildServiceProvider();
         }
 
         [Fact]
@@ -22,7 +22,7 @@ namespace Portfolio.Assistant.Functions.Tests
             using var services = Services();
 
             services.GetRequiredService<IOptions<RateLimits>>().Value.Should().Be(new RateLimits());
-            services.GetRequiredService<InMemoryRateLimiter>().Should().NotBeNull();
+            services.GetRequiredService<RateLimiter>().Should().NotBeNull();
         }
 
         [Fact]

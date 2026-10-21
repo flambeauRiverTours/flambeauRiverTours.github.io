@@ -34,7 +34,7 @@
             _ => visitor,
         };
 
-        // the daily counts live in a partition per UTC date, so they reset at UTC midnight
+        // the daily counts reset at UTC midnight
         private static DateTimeOffset NextUtcMidnight(DateTimeOffset now) => new(now.UtcDateTime.Date.AddDays(1), TimeSpan.Zero);
 
         // rounded up, so a client that waits exactly this long is never a moment early

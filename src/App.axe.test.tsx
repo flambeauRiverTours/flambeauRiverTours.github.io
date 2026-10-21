@@ -95,9 +95,10 @@ describe.each([["a wide screen", 1280], ["a phone", 375]])("The page on %s", (_,
 
         await userEvent.click(screen.getByRole("button", { name: starter }));
 
-        //within the drawer: the page's own Experience section has some of the same words
+        //within the drawer: the page's own Experience section has some of the same words; and on screen, not the
+        //screen-reader announcement that repeats the latest reply
         const drawer = screen.getByRole("dialog", { name: "Ask about Jack's experience" });
-        await waitFor(() => expect(within(drawer).getByText(shown)).toBeTruthy());
+        await waitFor(() => expect(within(drawer).getByText(shown, { ignore: ".visually-hidden" })).toBeTruthy());
         expect(await violations()).toEqual([]);
     });
 });

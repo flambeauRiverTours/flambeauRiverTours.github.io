@@ -30,8 +30,17 @@ namespace Portfolio.Assistant.Core
                 return Invalid($"history has more than {MaxHistoryTurns} turns.");
             }
 
-            var problem = history.Select(ProblemWith).FirstOrDefault(found => found is not null);
+            var problem = history.Select(ProblemWith).Concat(history.Select(OutOfTurn)).FirstOrDefault(found => found is not null)
+                ?? (history.Count % 2 == 1 ? "history must end with an assistant message." : null);
             return problem is null ? new AskValidation.Valid(question, [.. history.Select(ToChatMessage)]) : Invalid(problem);
+        }
+
+        // the API is stateless, so assistant turns are whatever the client sends; only the drawer's alternating
+        // shape is accepted, so a run of forged answers can't read to the model as its own words
+        private static string? OutOfTurn(AskRequestMessage message, int index)
+        {
+            var expected = index % 2 == 0 ? "user" : "assistant";
+            return message.Role == expected ? null : $"history[{index}].role must be \"{expected}\": messages alternate, starting with a question.";
         }
 
         private static string? ProblemWith(AskRequestMessage message, int index)

@@ -10,10 +10,13 @@ using Portfolio.Assistant.Core;
 namespace Portfolio.Assistant.Functions
 {
     /// <summary>Answers a visitor's question about Jack: <c>POST /api/ask</c>.</summary>
-    internal sealed class AskFunction(KnowledgeBase knowledge, IAnswerModel model, InMemoryRateLimiter rateLimiter, IQuestionLog questionLog, TimeProvider clock, ILogger<AskFunction> logger)
+    internal sealed class AskFunction(KnowledgeBase knowledge, IAnswerModel model, RateLimiter rateLimiter, IQuestionLog questionLog, TimeProvider clock, ILogger<AskFunction> logger)
     {
         /// <summary>The start of the warning logged for each question the global cap turns away; <c>main.bicep</c>'s alert searches for it.</summary>
         public const string GlobalCapReachedMessage = "The global daily cap is reached";
+
+        // nginx's "client closed request": nobody reads it, but it keeps a closed drawer out of the failures
+        private const int ClientClosedRequest = 499;
 
         private const int MaxBodyBytes = 16 * 1024;
 
@@ -24,9 +27,22 @@ namespace Portfolio.Assistant.Functions
             var arrived = clock.GetUtcNow();
             Build.AddHeader(request.HttpContext.Response);
 
-            var outcome = await AnswerAsync(request, cancellationToken);
+            AskOutcome outcome;
+            try
+            {
+                outcome = await AnswerAsync(request, cancellationToken);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                // the visitor left before their question reached the model, so there is nothing to log
+                return new StatusCodeResult(ClientClosedRequest);
+            }
 
-            await LogAsync(QuestionLogEntry.For(outcome, RequestId(request), arrived, clock.GetUtcNow() - arrived, model.Deployment, knowledge.PromptVersion));
+            if (QuestionLogEntry.For(outcome, RequestId(request), arrived, clock.GetUtcNow() - arrived, model.Deployment, knowledge.PromptVersion) is { } entry)
+            {
+                await LogAsync(entry);
+            }
+
             return Respond(outcome, request.HttpContext.Response);
         }
 
@@ -38,7 +54,13 @@ namespace Portfolio.Assistant.Functions
                 return new AskOutcome.Invalid(invalid.Detail);
             }
 
-            if (rateLimiter.Admit(VisitorAddress.Of(request)) is RateLimitDecision.Denied denied)
+            var decision = await AdmitAsync(VisitorAddress.Of(request));
+            if (decision is null)
+            {
+                return new AskOutcome.CountFailed();
+            }
+
+            if (decision is RateLimitDecision.Denied denied)
             {
                 if (denied.GlobalCapReached)
                 {
@@ -49,10 +71,36 @@ namespace Portfolio.Assistant.Functions
             }
 
             var ask = (AskValidation.Valid)validation;
-            var answer = await AskModelAsync(ask, cancellationToken);
-            return answer is null
-                ? new AskOutcome.ModelError(ask)
-                : new AskOutcome.Answered(ask, answer, LinkExtractor.Extract(answer.Text, knowledge.Links));
+            try
+            {
+                var answer = await AskModelAsync(ask, cancellationToken);
+                return answer is null ? new AskOutcome.ModelError(ask) : new AskOutcome.Answered(ask, answer, Reply(answer));
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return new AskOutcome.Cancelled(ask);
+            }
+        }
+
+        // the global count is the cost control, so a failure to read or save it turns the question away (null)
+        private async Task<RateLimitDecision?> AdmitAsync(string visitorAddress)
+        {
+            try
+            {
+                return await rateLimiter.AdmitAsync(visitorAddress);
+            }
+            catch (Exception error)
+            {
+                logger.LogError(error, "The global question count couldn't be read or saved, so the question was turned away");
+                return null;
+            }
+        }
+
+        // an answer cut off at the token limit ends with an ellipsis, so the visitor can tell
+        private AnswerWithLinks Reply(ModelAnswer answer)
+        {
+            var reply = LinkExtractor.Extract(answer.Text, knowledge.Links);
+            return answer.Truncated ? reply with { Text = reply.Text.TrimEnd() + "…" } : reply;
         }
 
         // reads one byte past the cap at most, so an oversized body is refused without being read in full
@@ -97,7 +145,7 @@ namespace Portfolio.Assistant.Functions
         private static string RequestId(HttpRequest request) => Activity.Current?.TraceId.ToHexString() ?? request.HttpContext.TraceIdentifier;
 
         // the log is for review: a failed write costs a warning, never the visitor's answer.
-        // It isn't cancelled with the request, so an answer the visitor left before reading is still kept
+        // It isn't cancelled with the request, so a question the visitor left is still kept
         private async Task LogAsync(QuestionLogEntry entry)
         {
             try
@@ -115,7 +163,8 @@ namespace Portfolio.Assistant.Functions
             AskOutcome.Answered answered => new OkObjectResult(new { answer = answered.Reply.Text, links = answered.Reply.Links }),
             AskOutcome.Invalid invalid => new BadRequestObjectResult(new { error = "invalid", detail = invalid.Detail }),
             AskOutcome.RateLimited limited => TooManyRequests(response, limited.RetryAfterSeconds),
-            AskOutcome.ModelError => new ObjectResult(new { error = "unavailable" }) { StatusCode = StatusCodes.Status503ServiceUnavailable },
+            AskOutcome.ModelError or AskOutcome.CountFailed => new ObjectResult(new { error = "unavailable" }) { StatusCode = StatusCodes.Status503ServiceUnavailable },
+            AskOutcome.Cancelled => new StatusCodeResult(ClientClosedRequest),
             _ => throw new ArgumentOutOfRangeException(nameof(outcome), outcome, "Unknown outcome."),
         };
 

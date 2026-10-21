@@ -19,8 +19,9 @@ if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("APPLICATIONINSIGHT
 var credential = AzureCredential.For(Environment.GetEnvironmentVariable("IDENTITY_ENDPOINT"));
 builder.Services.AddKnowledgeBase(Path.Combine(AppContext.BaseDirectory, "knowledge"));
 builder.Services.AddClaudeAnswerModel(credential);
+builder.Services.AddStorage(credential);
 builder.Services.AddRateLimiting();
-builder.Services.AddQuestionLog(credential);
+builder.Services.AddQuestionLog();
 builder.Services.Configure<ServiceProviderOptions>(options =>
 {
     options.ValidateOnBuild = true;

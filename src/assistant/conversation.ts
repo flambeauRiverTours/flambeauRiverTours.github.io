@@ -48,6 +48,17 @@ export function historyFor(turns: Turn[]): HistoryMessage[] {
         ]);
 }
 
+/** What a screen reader hears for the latest reply: once per turn, never the visitor's own question or the waiting text */
+export function announcementFor(turns: Turn[]): string {
+    const last = turns[turns.length - 1];
+    switch (last?.state) {
+        case "answered": return last.answer;
+        case "rateLimited": return `You've reached the question limit for now. Try again ${waitText(last.retryAfterSeconds)}.`;
+        case "unavailable": return "The assistant is unavailable right now.";
+        default: return "";
+    }
+}
+
 /**
  * When a rate-limited visitor may ask again, e.g. "in 5 minutes"
  * @param retryAfterSeconds From the API's 429; the daily limits reset at midnight UTC, hours away

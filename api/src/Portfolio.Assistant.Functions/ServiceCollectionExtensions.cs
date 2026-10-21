@@ -16,8 +16,8 @@ namespace Portfolio.Assistant.Functions
         public static IServiceCollection AddKnowledgeBase(this IServiceCollection services, string folder) =>
             services.AddSingleton(KnowledgeBase.Load(fileName => File.ReadAllText(Path.Combine(folder, fileName))));
 
-        /// <summary>Registers <see cref="InMemoryRateLimiter"/> with the limits from the <c>Limits</c> settings (<c>Limits__PerMinute</c> and so on).</summary>
-        /// <remarks>Limits below one stop the app starting; missing ones keep the agreed defaults.</remarks>
+        /// <summary>Registers <see cref="RateLimiter"/> with the limits from the <c>Limits</c> settings (<c>Limits__PerMinute</c> and so on).</summary>
+        /// <remarks>Limits below one stop the app starting; missing ones keep the agreed defaults. The global count goes to <see cref="AddStorage"/>'s account.</remarks>
         public static IServiceCollection AddRateLimiting(this IServiceCollection services)
         {
             services.AddOptions<RateLimits>()
@@ -25,29 +25,33 @@ namespace Portfolio.Assistant.Functions
                 .Validate(limits => limits is { PerMinute: > 0, PerDay: > 0, GlobalPerDay: > 0 }, "Limits:PerMinute, Limits:PerDay and Limits:GlobalPerDay must each be at least 1.")
                 .ValidateOnStart();
             services.TryAddSingleton(TimeProvider.System);
+            services.TryAddSingleton<IDailyCountStore>(provider =>
+                new BlobDailyCountStore(provider.GetRequiredService<BlobServiceClient>().GetBlobContainerClient(BlobDailyCountStore.ContainerName)));
 
-            return services.AddSingleton(provider =>
-                new InMemoryRateLimiter(provider.GetRequiredService<IOptions<RateLimits>>().Value, provider.GetRequiredService<TimeProvider>()));
+            return services.AddSingleton(provider => new RateLimiter(
+                provider.GetRequiredService<IOptions<RateLimits>>().Value, provider.GetRequiredService<TimeProvider>(), provider.GetRequiredService<IDailyCountStore>()));
         }
 
-        /// <summary>Registers <see cref="BlobQuestionLog"/> from the <c>QuestionLog</c> settings.</summary>
-        /// <param name="credential">Signs in to the account named by <c>QuestionLog__BlobServiceUri</c>.</param>
-        public static IServiceCollection AddQuestionLog(this IServiceCollection services, TokenCredential credential)
+        /// <summary>Registers <see cref="BlobQuestionLog"/> in <see cref="AddStorage"/>'s account.</summary>
+        public static IServiceCollection AddQuestionLog(this IServiceCollection services) =>
+            services.AddSingleton<IQuestionLog>(provider =>
+                new BlobQuestionLog(provider.GetRequiredService<BlobServiceClient>().GetBlobContainerClient(BlobQuestionLog.ContainerName)));
+
+        /// <summary>Registers the storage account from the <c>Storage</c> settings, for the question log and the global count.</summary>
+        /// <param name="credential">Signs in to the account named by <c>Storage__BlobServiceUri</c>.</param>
+        public static IServiceCollection AddStorage(this IServiceCollection services, TokenCredential credential)
         {
-            services.AddOptions<QuestionLogOptions>()
-                .BindConfiguration("QuestionLog")
+            services.AddOptions<StorageOptions>()
+                .BindConfiguration("Storage")
                 .Validate(
                     options => (options.BlobServiceUri is null) != string.IsNullOrEmpty(options.ConnectionString),
-                    "Set exactly one of QuestionLog:BlobServiceUri (Azure) and QuestionLog:ConnectionString (Azurite).")
+                    "Set exactly one of Storage:BlobServiceUri (Azure) and Storage:ConnectionString (Azurite).")
                 .ValidateOnStart();
 
-            return services.AddSingleton<IQuestionLog>(provider =>
+            return services.AddSingleton(provider =>
             {
-                var options = provider.GetRequiredService<IOptions<QuestionLogOptions>>().Value;
-                var container = options.BlobServiceUri is { } address
-                    ? new BlobServiceClient(address, credential).GetBlobContainerClient(BlobQuestionLog.ContainerName)
-                    : new BlobContainerClient(options.ConnectionString, BlobQuestionLog.ContainerName);
-                return new BlobQuestionLog(container);
+                var options = provider.GetRequiredService<IOptions<StorageOptions>>().Value;
+                return options.BlobServiceUri is { } address ? new BlobServiceClient(address, credential) : new BlobServiceClient(options.ConnectionString);
             });
         }
     }

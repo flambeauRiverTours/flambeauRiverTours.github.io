@@ -35,7 +35,7 @@ Browser (GitHub Pages, jacktreadwell.com)
        Azure Function (.NET isolated, Flex Consumption), copied from FantasyFootball/infra
          1. CORS: only https://jacktreadwell.com (+ localhost in dev)
          2. Validate: question ≤ 500 chars, history ≤ 4 turns
-         3. Rate limit: per IP (5/min, 30/day) + global daily cap (300/day), counted in memory
+         3. Rate limit: per IP (5/min, 30/day), counted in memory + global daily cap (300/day), stored
             on the app's single instance (maximumInstanceCount 1); nothing IP-derived is ever written
          4. Model call through IAnswerModel → Foundry deployment (Claude Haiku 5.5)
             system = rules + knowledge file (with link IDs), thinking off, low effort, max_tokens 400
@@ -97,7 +97,7 @@ The whole selection process costs roughly **$1–2** in model fees. Large models
 **Launch bar (agreed):** 100% of trap, privacy, jailbreak and sensitive cases pass (no invented facts, no private details, no broken rules, no political stances or unprofessional replies) and ≥ 90% of all cases pass. If no model clearly does better than the hand-written FAQ on the eval set, ship the FAQ as a plain page section instead.
 
 **Logging (agreed: questions and answers).** Logs show what recruiters actually ask and catch wrong answers the evals missed.
-- **What:** timestamp, question, answer, links, model/deployment, latency, token counts, and whether a limit was hit. Nothing derived from the IP address: the rate limiter keeps addresses only in memory for a day.
+- **What:** for each question that reached the model: timestamp, question, answer, links, model/deployment, latency, token counts (cache reads and writes too) and how it ended. Requests turned away by a limit or the validator are App Insights requests with their status code, not log lines (changed 2026-10-21 after PR review). Nothing derived from the IP address: the rate limiter keeps addresses only in memory for a day.
 - **Where:** one JSON-lines blob per day in a private container in the Function's storage account, in the same US region as the Function and Foundry resource. EU storage isn't needed: storage location isn't what GDPR requires (transfers to Microsoft in the US are allowed), and the site targets US employers.
 - **Retention:** a Blob lifecycle rule in Bicep deletes logs after 90 days automatically, with no cleanup code.
 - **Review:** a weekly skim, plus adding any bad answers as new eval questions.
@@ -165,6 +165,6 @@ The existing Foundry setup saves some backend work. Entry anchors, link checking
 8. Large models are out of scope: a candidate's projected cost must be ≤ $3/month at 1k questions; if none passes, ship the FAQ
 9. Replace the Jules Function app (`func-portfolio-ai-chat`, Windows Consumption) with a new Flex Consumption app from Bicep, then delete the old resources
 10. Model (2026-10-19): **Claude Haiku 5.5** (`claude-haiku-5-5`, Hosted on Azure, 50k tokens a minute), called through `Anthropic.Foundry` with thinking off and low effort. On the same 24 cases it scored 23/24, against 18/24 for gpt-4.1-mini and about 4/16 coherent answers for Phi-4-mini. It costs about $0.50 a month at 1,000 questions. Tuning took the full eval set from 271/335 (81%) to 323–327/335 (96–98%), with no invented facts, private details or stances; accepted as good enough to launch on (2026-10-20). Summary of the runs, rounds and decisions: `tasks/model-evaluation.md`.
-11. Rate limiting (2026-10-21): counted in memory on a single instance (`maximumInstanceCount: 1`; Flex Consumption allows 1–1,000) instead of hashed IPs in Table Storage. It drops the table, the IP hashing and its secret, the ETag retries and the cleanup timer, and nothing IP-derived is ever written. Counts restart with the app, which an abuser can't trigger.
+11. Rate limiting (2026-10-21): counted in memory on a single instance (`maximumInstanceCount: 1`; Flex Consumption allows 1–1,000) instead of hashed IPs in Table Storage. It drops the table, the IP hashing and its secret, the ETag retries and the cleanup timer, and nothing IP-derived is ever written. Counts restart with the app, which an abuser can't trigger. **Revised 2026-10-21 after PR review:** Flex Consumption stops an idle app, so an abuser *can* restart the counts by pausing between bursts. The global daily count is now stored, as one blob per UTC day written with ETag conditions, and a question is refused if it can't be saved. Visitors are still counted only in memory (IPv6 per /64).
 
 The build order with technical details is in `tasks/todo.md` ("LLM assistant: implementation tasks").

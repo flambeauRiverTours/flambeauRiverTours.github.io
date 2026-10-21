@@ -67,7 +67,11 @@ namespace Portfolio.Assistant.Evals
             }
 
             // graded outside the try, so a grader bug stops the eval instead of looking like a model error
-            return new RunResult(answer.Text, grader.Grade(evalCase, answer.Text), answer.InputTokens, answer.OutputTokens, answer.Filtered);
+            return new RunResult(answer.Text, grader.Grade(evalCase, answer.Text), answer.InputTokens, answer.OutputTokens, answer.Filtered)
+            {
+                CacheReadTokens = answer.CacheReadTokens,
+                CacheWriteTokens = answer.CacheWriteTokens,
+            };
         }
 
         private static RunResult Failed(string message) => new(message, new RunGrade([$"model error: {message}"], LinkScore.None), 0, 0);

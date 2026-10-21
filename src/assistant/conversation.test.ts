@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { conversationReducer, historyFor, maxMessageLength, Turn, waitText } from "./conversation";
+import { announcementFor, conversationReducer, historyFor, maxMessageLength, Turn, waitText } from "./conversation";
 
 const spie = { id: "experience-spie", label: "Experience › SPIE" };
 
@@ -59,6 +59,19 @@ describe("historyFor", () => {
         const history = historyFor([answered("Tell me everything?", "x".repeat(2_000))]);
 
         expect(history[1]?.content).toHaveLength(maxMessageLength);
+    });
+});
+
+//a screen reader hears each reply once, not the visitor's own question or the waiting text
+describe("announcementFor", () => {
+    it.each<[string, Turn[], string]>([
+        ["nothing before the first question", [], ""],
+        ["nothing while waiting", [answered("Q?", "Old answer."), { question: "Next?", state: "waiting" }], ""],
+        ["the latest answer", [answered("Q?", "Old answer."), answered("Next?", "New answer.")], "New answer."],
+        ["the wait when rate limited", [{ question: "Q?", state: "rateLimited", retryAfterSeconds: 120 }], "You've reached the question limit for now. Try again in 2 minutes."],
+        ["the outage", [{ question: "Q?", state: "unavailable" }], "The assistant is unavailable right now."],
+    ])("announces %s", (_, turns, announcement) => {
+        expect(announcementFor(turns)).toBe(announcement);
     });
 });
 

@@ -40,10 +40,14 @@ export interface AskOptions extends ApiOptions {
  */
 export async function ask(question: string, history: HistoryMessage[], options: AskOptions = {}): Promise<AskResult> {
     const { apiUrl = assistantApiUrl, fetch: send = fetch, signal, timeoutMs = defaultTimeoutMs } = options;
+    if (signal?.aborted) return { kind: "cancelled" };
+
     //one controller ends the request on either the timeout or the visitor leaving
+    //(AbortSignal.any would do this, but TypeScript 5.4's DOM types don't have it)
     const request = new AbortController();
     const timer = setTimeout(() => request.abort(), timeoutMs);
-    signal?.addEventListener("abort", () => request.abort(), { once: true });
+    const visitorLeft = () => request.abort();
+    signal?.addEventListener("abort", visitorLeft, { once: true });
     try {
         const response = await send(`${apiUrl}/api/ask`, {
             method: "POST",
@@ -56,6 +60,7 @@ export async function ask(question: string, history: HistoryMessage[], options: 
         return signal?.aborted ? { kind: "cancelled" } : { kind: "unavailable" };
     } finally {
         clearTimeout(timer);
+        signal?.removeEventListener("abort", visitorLeft);
     }
 }
 

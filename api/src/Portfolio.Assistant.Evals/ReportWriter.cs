@@ -10,6 +10,8 @@ namespace Portfolio.Assistant.Evals
         // Claude Haiku 5.5 list prices for prompts up to 100k tokens; Foundry's pricing page is authoritative, edit these when the model changes
         private const decimal DollarsPerMillionInput = 0.10m;
         private const decimal DollarsPerMillionOutput = 0.50m;
+        private const decimal CacheReadPriceFactor = 0.1m;
+        private const decimal CacheWritePriceFactor = 1.25m;
 
         private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
 
@@ -98,12 +100,16 @@ namespace Portfolio.Assistant.Evals
         {
             var runs = results.SelectMany(result => result.Runs).ToList();
             long input = runs.Sum(run => run.InputTokens);
+            long cacheRead = runs.Sum(run => run.CacheReadTokens);
+            long cacheWrite = runs.Sum(run => run.CacheWriteTokens);
             long output = runs.Sum(run => run.OutputTokens);
-            var cost = (input * DollarsPerMillionInput + output * DollarsPerMillionOutput) / 1_000_000;
+            var inputPriced = input - cacheRead - cacheWrite + (cacheRead * CacheReadPriceFactor) + (cacheWrite * CacheWritePriceFactor);
+            var cost = (inputPriced * DollarsPerMillionInput + output * DollarsPerMillionOutput) / 1_000_000;
             var prices = $"${DollarsPerMillionInput.ToString("0.00", Invariant)} / ${DollarsPerMillionOutput.ToString("0.00", Invariant)} per million tokens";
+            var cached = $"{cacheRead.ToString("N0", Invariant)} read from the cache, {cacheWrite.ToString("N0", Invariant)} written to it";
 
             report.AppendLine("## Tokens and cost").AppendLine()
-                .AppendLine(Invariant, $"- {input.ToString("N0", Invariant)} input + {output.ToString("N0", Invariant)} output tokens")
+                .AppendLine(Invariant, $"- {input.ToString("N0", Invariant)} input ({cached}) + {output.ToString("N0", Invariant)} output tokens")
                 .AppendLine(Invariant, $"- About {cost.ToString("$0.00", Invariant)} at the assumed prices ({prices})")
                 .AppendLine();
         }

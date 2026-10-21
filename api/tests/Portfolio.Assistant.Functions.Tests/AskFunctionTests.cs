@@ -7,7 +7,7 @@ using Portfolio.Assistant.Core;
 
 namespace Portfolio.Assistant.Functions.Tests
 {
-    public class AskFunctionTests
+    public sealed class AskFunctionTests : IDisposable
     {
         private const string Question = """{"question":"Where does Jack work?"}""";
 
@@ -17,13 +17,23 @@ namespace Portfolio.Assistant.Functions.Tests
         private readonly ManualTimeProvider clock = new(new DateTimeOffset(2026, 10, 21, 14, 0, 0, TimeSpan.Zero));
         private readonly RecordingQuestionLog log = new();
         private readonly RecordingLogger<AskFunction> logger = new();
+        private readonly List<RateLimiter> rateLimiters = [];
+
+        public void Dispose() => rateLimiters.ForEach(rateLimiter => rateLimiter.Dispose());
 
         private static HttpRequest Post(string body, string? forwardedFor = "203.0.113.7:51234") => TestRequests.Post(body, forwardedFor);
 
-        private InMemoryRateLimiter OneQuestionAMinute() => new(new RateLimits { PerMinute = 1 }, clock);
+        private RateLimiter RateLimiter(RateLimits? limits = null, IDailyCountStore? store = null)
+        {
+            var rateLimiter = new RateLimiter(limits ?? new RateLimits(), clock, store ?? new MemoryDailyCountStore());
+            rateLimiters.Add(rateLimiter);
+            return rateLimiter;
+        }
 
-        private Task<IActionResult> Ask(HttpRequest request, IAnswerModel? model = null, InMemoryRateLimiter? rateLimiter = null, IQuestionLog? questionLog = null, CancellationToken? cancellationToken = null) =>
-            new AskFunction(Knowledge, model ?? ScriptedModel.Replying("Jack works at SPIE.\nLinks: experience-spie"), rateLimiter ?? new InMemoryRateLimiter(new RateLimits(), clock), questionLog ?? log, clock, logger)
+        private RateLimiter OneQuestionAMinute() => RateLimiter(new RateLimits { PerMinute = 1 });
+
+        private Task<IActionResult> Ask(HttpRequest request, IAnswerModel? model = null, RateLimiter? rateLimiter = null, IQuestionLog? questionLog = null, CancellationToken? cancellationToken = null) =>
+            new AskFunction(Knowledge, model ?? ScriptedModel.Replying("Jack works at SPIE.\nLinks: experience-spie"), rateLimiter ?? RateLimiter(), questionLog ?? log, clock, logger)
                 .Ask(request, cancellationToken ?? TestContext.Current.CancellationToken);
 
         private static (int Status, JsonElement Body) StatusAndBody(IActionResult result)
@@ -157,17 +167,60 @@ namespace Portfolio.Assistant.Functions.Tests
             body.GetProperty("error").GetString().Should().Be("unavailable");
         }
 
+        // a closed drawer is not a failure: no exception for App Insights to count against the alert
         [Fact]
-        public async Task A_visitor_who_hangs_up_gets_no_answer()
+        public async Task A_visitor_who_hangs_up_before_asking_gets_an_empty_499()
         {
             using var hungUp = new CancellationTokenSource();
             await hungUp.CancelAsync();
 
-            await FluentActions.Awaiting(() => Ask(Post(Question), cancellationToken: hungUp.Token)).Should().ThrowAsync<OperationCanceledException>();
+            (await Ask(Post(Question), cancellationToken: hungUp.Token)).Should().BeOfType<StatusCodeResult>().Which.StatusCode.Should().Be(499);
+            log.Entries.Should().BeEmpty();
+        }
+
+        // slow enough that the visitor gave up: exactly the questions worth reviewing
+        [Fact]
+        public async Task A_visitor_who_leaves_while_the_model_answers_is_logged_as_cancelled()
+        {
+            using var leaving = new CancellationTokenSource();
+            var model = new ScriptedModel(() =>
+            {
+                leaving.Cancel();
+                throw new OperationCanceledException(leaving.Token);
+            });
+
+            (await Ask(Post(Question), model, cancellationToken: leaving.Token)).Should().BeOfType<StatusCodeResult>().Which.StatusCode.Should().Be(499);
+            log.Entries.Should().ContainSingle().Which.Should().BeEquivalentTo(new { Outcome = "cancelled", Question = "Where does Jack work?" });
+            logger.Entries.Should().NotContain(entry => entry.Level >= LogLevel.Warning);
         }
 
         [Fact]
-        public async Task Every_request_is_logged_once_with_how_it_ended()
+        public async Task An_answer_cut_off_at_the_token_limit_ends_with_an_ellipsis()
+        {
+            var model = new ScriptedModel(() => new ModelAnswer("Jack has worked on many projects, including ", 900, 400) { Truncated = true });
+
+            var (_, body) = StatusAndBody(await Ask(Post(Question), model));
+
+            body.GetProperty("answer").GetString().Should().Be("Jack has worked on many projects, including…");
+            log.Entries.Should().ContainSingle().Which.Outcome.Should().Be("truncated");
+        }
+
+        // the global count is the cost control: if it can't be read or saved, no question goes to the model
+        [Fact]
+        public async Task A_question_is_a_503_when_the_global_count_cant_be_saved()
+        {
+            var model = ScriptedModel.Replying("Jack works at SPIE.\nLinks: none");
+
+            var (status, body) = StatusAndBody(await Ask(Post(Question), model, RateLimiter(store: new FailingDailyCountStore())));
+
+            status.Should().Be(503);
+            body.GetProperty("error").GetString().Should().Be("unavailable");
+            model.Prompts.Should().BeEmpty();
+            logger.Entries.Should().ContainSingle(entry => entry.Level == LogLevel.Error);
+        }
+
+        [Fact]
+        public async Task Every_question_that_reaches_the_model_is_logged_once_with_how_it_ended()
         {
             var rateLimiter = OneQuestionAMinute();
             var blocked = new ScriptedModel(() => new ModelAnswer(ModelAnswer.FilteredReply, 88, 0, Filtered: true));
@@ -178,7 +231,7 @@ namespace Portfolio.Assistant.Functions.Tests
             await Ask(Post(Question, "198.51.100.9"), ScriptedModel.Throwing(new HttpRequestException()), rateLimiter);
             await Ask(Post(Question, "198.51.100.10"), blocked, rateLimiter);
 
-            log.Entries.Select(entry => entry.Outcome).Should().Equal("ok", "invalid", "rate_limited", "model_error", "filtered");
+            log.Entries.Select(entry => entry.Outcome).Should().Equal("ok", "model_error", "filtered");
         }
 
         [Fact]
@@ -201,7 +254,7 @@ namespace Portfolio.Assistant.Functions.Tests
         [Fact]
         public async Task Reaching_the_global_cap_logs_the_warning_the_alert_watches_for()
         {
-            var rateLimiter = new InMemoryRateLimiter(new RateLimits { GlobalPerDay = 1 }, clock);
+            var rateLimiter = RateLimiter(new RateLimits { GlobalPerDay = 1 });
 
             await Ask(Post(Question), rateLimiter: rateLimiter);
             await Ask(Post(Question, "198.51.100.9"), rateLimiter: rateLimiter);

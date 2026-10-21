@@ -51,6 +51,44 @@ namespace Portfolio.Assistant.Functions.Tests
     }
 
     /// <summary>
+    /// Keeps each day's count with a version that changes on every write, as a blob's ETag does.
+    /// </summary>
+    internal sealed class MemoryDailyCountStore : IDailyCountStore
+    {
+        private readonly Dictionary<DateOnly, DailyCount> counts = [];
+        private int writes;
+
+        public int Count(DateOnly day) => counts.GetValueOrDefault(day)?.Count ?? 0;
+
+        /// <summary>Another instance's write, which makes this one's version stale.</summary>
+        public void WriteElsewhere(DateOnly day, int count) => counts[day] = new DailyCount(count, $"v{++writes}");
+
+        public Task<DailyCount> ReadAsync(DateOnly day) => Task.FromResult(counts.GetValueOrDefault(day) ?? new DailyCount(0, Version: null));
+
+        public Task<DailyCount?> TryWriteAsync(DateOnly day, int count, string? expectedVersion)
+        {
+            if (counts.GetValueOrDefault(day)?.Version != expectedVersion)
+            {
+                return Task.FromResult<DailyCount?>(null);
+            }
+
+            WriteElsewhere(day, count);
+            return Task.FromResult<DailyCount?>(counts[day]);
+        }
+    }
+
+    /// <summary>
+    /// Fails every read and write, as storage does when it is down or the role is missing.
+    /// </summary>
+    internal sealed class FailingDailyCountStore : IDailyCountStore
+    {
+        public Task<DailyCount> ReadAsync(DateOnly day) => Task.FromException<DailyCount>(new InvalidOperationException("Storage is down."));
+
+        public Task<DailyCount?> TryWriteAsync(DateOnly day, int count, string? expectedVersion) =>
+            Task.FromException<DailyCount?>(new InvalidOperationException("Storage is down."));
+    }
+
+    /// <summary>
     /// Keeps each log message with its level.
     /// </summary>
     internal sealed class RecordingLogger<T> : ILogger<T>
