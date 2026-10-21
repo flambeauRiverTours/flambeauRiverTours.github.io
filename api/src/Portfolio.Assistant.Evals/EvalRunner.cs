@@ -21,29 +21,33 @@ namespace Portfolio.Assistant.Evals
 
         /// <summary>Runs the cases a few calls at a time; results keep the cases' order.</summary>
         /// <param name="runs">How many times to ask each question; a case must pass every time.</param>
-        /// <param name="parallelism">How many calls to make at once; the deployment's rate limit is small.</param>
+        /// <param name="parallelism">How many model calls to make at once, and how many judge calls; each deployment's rate limit is small.</param>
         public async Task<IReadOnlyList<CaseResult>> RunAsync(IReadOnlyList<EvalCase> cases, int runs, int parallelism, CancellationToken cancellationToken)
         {
-            using var gate = new SemaphoreSlim(parallelism);
+            // the judge has its own limit: its deployment has its own rate limit, and it is slower than the model
+            using var modelGate = new SemaphoreSlim(parallelism);
+            using var judgeGate = new SemaphoreSlim(parallelism);
+            var gates = new Gates(modelGate, judgeGate);
             var tally = new Tally(cases.Count * runs, progressWriter);
-            return await Task.WhenAll(cases.Select(evalCase => RunCaseAsync(evalCase, runs, gate, tally, cancellationToken)));
+            return await Task.WhenAll(cases.Select(evalCase => RunCaseAsync(evalCase, runs, gates, tally, cancellationToken)));
         }
 
-        private async Task<CaseResult> RunCaseAsync(EvalCase evalCase, int runs, SemaphoreSlim gate, Tally tally, CancellationToken cancellationToken)
+        private async Task<CaseResult> RunCaseAsync(EvalCase evalCase, int runs, Gates gates, Tally tally, CancellationToken cancellationToken)
         {
-            var attempts = Enumerable.Range(0, runs).Select(_ => RunOnceAsync(evalCase, gate, tally, cancellationToken));
+            var attempts = Enumerable.Range(0, runs).Select(_ => RunOnceAsync(evalCase, gates, tally, cancellationToken));
             return new CaseResult(evalCase, await Task.WhenAll(attempts));
         }
 
-        private async Task<RunResult> RunOnceAsync(EvalCase evalCase, SemaphoreSlim gate, Tally tally, CancellationToken cancellationToken)
+        private async Task<RunResult> RunOnceAsync(EvalCase evalCase, Gates gates, Tally tally, CancellationToken cancellationToken)
         {
-            var result = await AskAsync(evalCase, gate, cancellationToken);
+            var result = await AskAsync(evalCase, gates, cancellationToken);
             tally.Record(result.Grade.Passed);
             return result;
         }
 
-        private async Task<RunResult> AskAsync(EvalCase evalCase, SemaphoreSlim gate, CancellationToken cancellationToken)
+        private async Task<RunResult> AskAsync(EvalCase evalCase, Gates gates, CancellationToken cancellationToken)
         {
+            var gate = gates.Model;
             await gate.WaitAsync(cancellationToken);
             // the deadline starts once the call has its slot, so time spent queueing doesn't count against it
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -69,7 +73,7 @@ namespace Portfolio.Assistant.Evals
 
             // graded outside the try, so a grader bug stops the eval instead of looking like a model error
             var grade = grader.Grade(evalCase, answer.Text);
-            var grounding = answer.Filtered ? null : await JudgeAsync(evalCase, answer.Text, cancellationToken);
+            var grounding = answer.Filtered ? null : await JudgeAsync(evalCase, answer.Text, gates.Judge, cancellationToken);
             var unsupported = (grounding?.Unsupported ?? []).Select(claim => $"unsupported claim: {claim}");
             return new RunResult(answer.Text, grade with { Failures = [.. grade.Failures, .. unsupported] }, answer.InputTokens, answer.OutputTokens, answer.Filtered)
             {
@@ -81,7 +85,7 @@ namespace Portfolio.Assistant.Evals
 
         // the judge sees the answer as the visitor would, without its Links line; a judge that is throttled or times out
         // says nothing about the answer, so the run is left unjudged rather than failed
-        private async Task<GroundingVerdict?> JudgeAsync(EvalCase evalCase, string raw, CancellationToken cancellationToken)
+        private async Task<GroundingVerdict?> JudgeAsync(EvalCase evalCase, string raw, SemaphoreSlim gate, CancellationToken cancellationToken)
         {
             if (judge is null)
             {
@@ -89,6 +93,7 @@ namespace Portfolio.Assistant.Evals
             }
 
             var shown = LinkExtractor.Extract(raw, knowledge.Links).Text;
+            await gate.WaitAsync(cancellationToken);
             using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             deadline.CancelAfter(timeout);
             try
@@ -99,6 +104,10 @@ namespace Portfolio.Assistant.Evals
             {
                 var detail = error is HttpRequestException { StatusCode: { } status } ? ((int)status).ToString(CultureInfo.InvariantCulture) : error.GetType().Name;
                 return new GroundingVerdict(Unsupported: null, 0, 0) { NoVerdictReason = $"the judge's call failed ({detail})" };
+            }
+            finally
+            {
+                gate.Release();
             }
         }
 
@@ -113,6 +122,9 @@ namespace Portfolio.Assistant.Evals
             HttpRequestException { StatusCode: { } status } => (int)status >= 500,
             _ => false,
         };
+
+        /// <summary>One limit for model calls and one for judge calls, shared by every run.</summary>
+        private sealed record Gates(SemaphoreSlim Model, SemaphoreSlim Judge);
 
         /// <summary>Counts finished calls across the parallel runs, so a long run shows it is still moving.</summary>
         private sealed class Tally(int total, TextWriter writer)

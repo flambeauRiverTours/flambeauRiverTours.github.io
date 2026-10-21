@@ -12,6 +12,7 @@ namespace Portfolio.Assistant.Evals
     /// <param name="Set">Which file of cases to run.</param>
     /// <param name="JudgeDeployment">A stronger Claude deployment that lists claims the knowledge doesn't support; null skips the check.</param>
     /// <param name="JudgeCheck">Run only the judge, over the hand-labelled answers, instead of the eval.</param>
+    /// <param name="JudgeThinking">Let the judge think before its verdict.</param>
     internal sealed record EvalOptions(
         bool SelfTest = false,
         string Deployment = "claude-haiku-5-5",
@@ -21,7 +22,8 @@ namespace Portfolio.Assistant.Evals
         IReadOnlyList<string>? Ids = null,
         EvalSet Set = EvalSet.Tuned,
         string? JudgeDeployment = null,
-        bool JudgeCheck = false)
+        bool JudgeCheck = false,
+        bool JudgeThinking = false)
     {
         /// <summary>Printed after any bad option.</summary>
         public const string Usage = """
@@ -36,6 +38,7 @@ namespace Portfolio.Assistant.Evals
               --set <tuned|heldout>  questions.jsonl (default), or heldout.jsonl, which is never tuned on
               --judge <name>         Claude deployment that checks every answer's claims against the knowledge, e.g. claude-sonnet-5-5
               --judge-check          With --judge: check the judge alone against the labelled answers in judge-checks.jsonl
+              --judge-thinking       With --judge: let the judge think (adaptive, medium effort); dearer, measure it with --judge-check first
             """;
 
         /// <summary>The cases' file in <c>api/evals/</c>.</summary>
@@ -59,6 +62,7 @@ namespace Portfolio.Assistant.Evals
                     "--set" => options with { Set = SetNamed(Value(remaining, name)) },
                     "--judge" => options with { JudgeDeployment = Value(remaining, name) },
                     "--judge-check" => options with { JudgeCheck = true },
+                    "--judge-thinking" => options with { JudgeThinking = true },
                     _ => throw new UsageException($"Unknown option: {name}"),
                 };
             }

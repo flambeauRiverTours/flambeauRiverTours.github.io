@@ -73,6 +73,20 @@ namespace Portfolio.Assistant.Foundry.Tests
             claim.GetProperty("additionalProperties").GetBoolean().Should().BeFalse();
         }
 
+        // subtle mislabels are where reasoning may help; it's an option, measured with --judge-check before it's trusted
+        [Fact]
+        public async Task A_thinking_judge_uses_adaptive_thinking_with_room_to_think()
+        {
+            var handler = new ScriptedHandler(ScriptedHandler.Respond(HttpStatusCode.OK, Reply("""{"claims":[]}""")));
+            var client = new AnthropicClient { ApiKey = "test-key", BaseUrl = "https://example.test", HttpClient = new HttpClient(handler), MaxRetries = 0 };
+
+            await new ClaudeGroundingJudge(client, "sonnet-test", System, think: true).JudgeAsync("Q?", "A.", TestContext.Current.CancellationToken);
+
+            var body = JsonDocument.Parse(handler.Sent.Single().Body).RootElement;
+            body.GetProperty("thinking").GetProperty("type").GetString().Should().Be("adaptive");
+            body.GetProperty("max_tokens").GetInt32().Should().BeGreaterThan(1024);
+        }
+
         // the judge must quote the sentence that supports each claim, or mark it unsupported: looking it up is the point
         [Fact]
         public async Task It_returns_the_claims_it_found_no_evidence_for_and_the_tokens_used()

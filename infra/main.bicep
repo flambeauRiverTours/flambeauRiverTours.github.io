@@ -22,6 +22,9 @@ param foundryDeployment string = 'claude-haiku-5-5'
 param alertEmail string
 
 @description('Entra object ID of the person who reviews the question logs and honours deletion requests. Shared keys are off, so reading blobs needs a data role.')
+// a GUID: an unset repo variable fails validation in preview and infra, before anything is changed
+@minLength(36)
+@maxLength(36)
 param logOwnerPrincipalId string
 
 @description('Origins the browser may call the API from.')

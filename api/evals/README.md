@@ -130,8 +130,11 @@ Exit code: 0 when the launch bar is met, 1 when it isn't, 2 for bad options or s
 ## Held-out set and grounding judge
 
 - `heldout.jsonl` holds 50 cases drafted blind (2026-10-21) from the knowledge files only, by a model that never saw `questions.jsonl` or past failures. Run it with `--set heldout`; reports end `-heldout.md`. Never tune the prompt on it: it's measured, not fixed.
+- **A held-out batch is used up by looking at it.** Any edit to the prompt or the grader after a held-out run, whatever prompted it, counts that batch as tuned, and the next held-out number needs a fresh batch, scored once. Grading bugs found on that run may be fixed for next time, but the recorded number stays as scored. (The first batch scored 80% on `291848d5a587`; the 94% that followed a prompt round informed by its failures is not a held-out number.)
 - `--judge <deployment>` (e.g. `claude-sonnet-5-5`) has a stronger model list every claim in each answer that `site.md` and `faq.md` don't support; any unsupported claim fails the run. Runs the judge couldn't check are counted as not judged, not failed.
 - `--self-test --judge <deployment>` judges the passExamples, which are correct answers, so anything flagged is a false positive: run it first to calibrate the judge (about 180 calls, about $0.55).
+- `--judge-check --judge <deployment>` runs the judge alone over `judge-checks.jsonl`, 41 hand-labelled answers (35 from real runs, 6 planted inventions), about $0.13. On 2026-10-21 it agreed on 33: 1 false positive among 15 flags, all 6 inventions caught, but only 8 of the 15 real unsupported answers. **Read a clean judged run as "none of the obvious inventions", not "no unsupported claims".** These figures are tuned (the judge's prompt was improved on these answers); `--judge-thinking` (adaptive, medium effort) didn't change them.
+- Judge calls are limited by `--parallel` separately from the model's, since the two deployments have separate rate limits.
 
 ## Run time
 

@@ -104,7 +104,7 @@ static IGroundingJudge? CreateJudge(EvalOptions options, string api)
     }
 
     string Read(string fileName) => File.ReadAllText(Path.Combine(api, "knowledge", fileName));
-    return ClaudeGroundingJudge.ForFoundry(uri, options.JudgeDeployment, new AzureCliCredential(), GroundingPrompt.System(Read("site.md"), Read("faq.md")), maxRetries: 7, attemptTimeout: TimeSpan.FromSeconds(60));
+    return ClaudeGroundingJudge.ForFoundry(uri, options.JudgeDeployment, new AzureCliCredential(), GroundingPrompt.System(Read("site.md"), Read("faq.md")), maxRetries: 7, attemptTimeout: TimeSpan.FromSeconds(60), think: options.JudgeThinking);
 }
 
 // checks the judge alone; its report goes to one git-ignored file, like the self-test's. Exit 0 only if it agrees with every label

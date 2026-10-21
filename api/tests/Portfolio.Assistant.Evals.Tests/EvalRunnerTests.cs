@@ -305,9 +305,52 @@ namespace Portfolio.Assistant.Evals.Tests
             second.Grounding!.Unsupported.Should().BeNull();
         }
 
+        // the judge is slower than the model; unlimited, its calls piled up and were throttled (78 unjudged runs on 2026-10-21)
+        [Fact]
+        public async Task Judge_calls_are_limited_to_the_same_parallelism_as_model_calls()
+        {
+            var judge = new SlowJudge();
+            EvalCase[] cases = [.. Enumerable.Range(0, 8).Select(index => Case($"case-{index}"))];
+
+            await new EvalRunner(new ScriptedModel(_ => "Jack works at SPIE.\nLinks: none"), Knowledge, Grader, judge: judge)
+                .RunAsync(cases, runs: 1, parallelism: 2, TestContext.Current.CancellationToken);
+
+            judge.MostAtOnce.Should().BeLessThanOrEqualTo(2);
+        }
+
         [Fact]
         public async Task Without_a_judge_no_run_has_a_grounding_verdict() =>
             (await Run(new ScriptedModel(_ => "Jack works at SPIE.\nLinks: none"), [Case("a")], runs: 1)).Single().Runs.Single().Grounding.Should().BeNull();
+    }
+
+    /// <summary>
+    /// A judge that takes a moment over each answer and records the most calls it had at once.
+    /// </summary>
+    internal sealed class SlowJudge : IGroundingJudge
+    {
+        private int atOnce;
+        private int mostAtOnce;
+
+        public int MostAtOnce => mostAtOnce;
+
+        public string Deployment => "slow-judge";
+
+        public async Task<GroundingVerdict> JudgeAsync(string question, string answer, CancellationToken cancellationToken)
+        {
+            var now = Interlocked.Increment(ref atOnce);
+            InterlockedMax(ref mostAtOnce, now);
+            await Task.Delay(50, cancellationToken);
+            Interlocked.Decrement(ref atOnce);
+            return new GroundingVerdict([], 0, 0);
+        }
+
+        private static void InterlockedMax(ref int target, int value)
+        {
+            int current;
+            while (value > (current = Volatile.Read(ref target)) && Interlocked.CompareExchange(ref target, value, current) != current)
+            {
+            }
+        }
     }
 
     /// <summary>

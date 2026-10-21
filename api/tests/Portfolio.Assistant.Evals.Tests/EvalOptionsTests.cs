@@ -84,6 +84,13 @@ namespace Portfolio.Assistant.Evals.Tests
         public void The_judge_check_can_be_chosen() =>
             EvalOptions.Parse(["--judge-check", "--judge", "claude-sonnet-5-5"]).JudgeCheck.Should().BeTrue();
 
+        [Fact]
+        public void The_judge_thinks_only_when_asked()
+        {
+            EvalOptions.Parse(["--judge", "claude-sonnet-5-5"]).JudgeThinking.Should().BeFalse();
+            EvalOptions.Parse(["--judge", "claude-sonnet-5-5", "--judge-thinking"]).JudgeThinking.Should().BeTrue();
+        }
+
         [Theory]
         [InlineData("Unknown set: tuning (tuned or heldout)", "--set", "tuning")]
         [InlineData("--judge needs a value", "--judge")]

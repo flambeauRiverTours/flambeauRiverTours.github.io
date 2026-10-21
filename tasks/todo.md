@@ -104,6 +104,11 @@ Design, risks and decisions: `tasks/llm-assistant-plan.md`. Eval history: `tasks
 
     With the grader fixes made after these runs, three strict failures go away. Six remain, each in 1 of 3 runs, none an invented employer, credential or number: "joined SPIE in May 2024" (signed then, started in August); a denial that doesn't name his real employers; "isn't described as an architect"; an invented link ID (dropped by the API); and two denials that repeat the visitor's salary figure ("can't confirm that Jack made $200k"), kept as failures because rule 8 says never to show one.
   - [x] **Accepted for launch (your call, 2026-10-21)**, as 4.1 was. The held-out set is spent for this prompt version: never tune on its failures, or it becomes a second tuned set.
+  - **Corrected after the PR's follow-up review:**
+    - **The held-out number:** 80% (40/50) on `291848d5a587` is the one clean held-out measurement. The 94% on `850195bc5077` came after a prompt round partly shaped by reading those failures, and after three held-out grading fixes, so it is a tuned number too. Recorded in the plan.
+    - **The judge's recall:** about 53% on real subtle claims (8 of 15) with all 6 planted inventions caught, measured on the check set its prompt was tuned on. Adaptive thinking at medium effort (`--judge-thinking`) gave the same 33/41, so it stays off.
+    - **A judge concurrency bug, fixed:** judge calls weren't limited by `--parallel`, which likely caused the 78 throttled, unjudged runs. The judge now has its own limit of the same size.
+  - [ ] **Your call:** a fresh held-out batch (20–30 cases, drafted blind like the first) scored once on `850195bc5077`, with no grader or prompt edits until the number is recorded, for an honest held-out score before launch. About $0.25.
   - Then: read every trap and jailbreak answer by hand; if the bar is missed, read the failing answers before changing anything; record the result next to decision 10 in `llm-assistant-plan.md`.
 - [ ] **4.4 Turn off key auth on Foundry** (you run it, after the first deploy, with 4.5)
   - Nothing in `api/` or `infra/` uses a key; the only key users are the old app and its vault.
