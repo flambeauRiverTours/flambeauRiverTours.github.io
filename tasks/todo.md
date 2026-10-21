@@ -74,70 +74,80 @@ scripts/
 
 ## Phase 1: backend (≈ 1 day)
 
-- [ ] **1.1 Projects.** Create the solution from the layout above: .NET 10, `Nullable` and `TreatWarningsAsErrors` on. Functions packages as in FantasyFootball (`Microsoft.Azure.Functions.Worker` 2.x, `.Sdk`, `.Extensions.Http.AspNetCore`, OpenTelemetry + Azure Monitor exporter) plus `Azure.Identity`, `Azure.Data.Tables`, `Azure.Storage.Blobs`. `Program.cs` follows FantasyFootball's: `FunctionsApplication.CreateBuilder`, `ConfigureFunctionsWebApplication`, OpenTelemetry only when the connection string is set, `ValidateOnBuild`.
-- [ ] **1.2 Knowledge packaging.** The Functions project copies `api/knowledge/*.md` and `links.json` to its output (`<None Include="..\..\knowledge\**" CopyToOutputDirectory="PreserveNewest" LinkBase="knowledge" />`). They're loaded once at startup into a singleton `KnowledgeBase` (system message, prompt version, link list). A missing or empty file fails startup.
-- [ ] **1.3 Core (pure functions, all unit-tested in 1.9)**
-  - `AskRequestValidator`: body ≤ 16 KB; `question` trimmed, 1–500 chars; `history` ≤ 4 turns (8 messages), roles `user`/`assistant` only, each ≤ 1,500 chars. Returns a typed error for the 400 response.
-  - `PromptBuilder`: system message (system prompt + knowledge), then history, then the question.
-  - `LinkExtractor`: takes the raw model text, finds the last non-empty line matching `^\s*Links:\s*(.*)$` (case-insensitive) or, like the eval grader, a well-formed `Links: ...` ending the last sentence (Phi-4-mini's usual format), splits on commas, trims, lowercases and dedupes. Keeps IDs present in `links.json`, at most 3, in order, and removes the line from the answer. A missing or garbled line → no links, answer unchanged. Also strips Markdown link syntax and bare URLs from the answer text.
-  - `RateLimitPolicy`: given the current counters and `now`, decides allow or deny and returns `retryAfterSeconds`.
-- [ ] **1.4 Foundry client behind `IAnswerModel`**
-  - **Mostly done:** `Portfolio.Assistant.Foundry.ClaudeAnswerModel` exists and is tested, built with `ClaudeAnswerModel.ForFoundry(endpoint, deployment, credential, maxRetries)` so no Anthropic SDK type leaves the project. What's left for the Function: read the endpoint and deployment from settings, pass a managed-identity credential instead of the Azure CLI one, and keep `maxRetries` low (1–2) so a visitor never waits long. The raw-REST chat-completions client used for Phi and GPT was removed on 2026-10-20 once Haiku was chosen.
-  - `Task<ModelAnswer> AnswerAsync(IReadOnlyList<ChatMessage> messages, CancellationToken ct)` → text, input/output tokens, finish reason, deployment name.
-  - **Spike first (≤ 1 h):** confirm Microsoft's current recommended .NET client for Foundry Models with Entra ID. Known-good fallback, tested 2026-10-16: `POST https://proj-portfolio-slm-resource.services.ai.azure.com/models/chat/completions?api-version=2024-05-01-preview`, `model` = deployment name, bearer token for scope `https://cognitiveservices.azure.com/.default`. If the chosen SDK supports `IChatClient` (Microsoft.Extensions.AI), implement `IAnswerModel` on top of it.
-  - Settings: `Foundry__Endpoint`, `Foundry__Deployment`, `Foundry__MaxTokens` (400), `Foundry__Temperature` (0.2), `Foundry__TimeoutSeconds` (20). Credential: `DefaultAzureCredential` (managed identity in Azure, your `az login` locally).
-  - At most 1 retry, only on 429/5xx, so a visitor never waits more than ~25 s.
-  - A content-filter rejection from Foundry maps to a `Filtered` result, not an exception.
-- [ ] **1.5 `POST /api/ask`** (anonymous). Order: validate → rate limit → model → extract links → log → respond.
-  - `200 { "answer": "...", "links": [{ "id", "label" }] }`
-  - `400 { "error": "invalid", "detail": "..." }`
-  - `429 { "error": "rate_limited", "retryAfterSeconds": n }`, plus a `Retry-After` header
-  - `200` with a fixed polite refusal when the content filter blocks the question or answer (honest, not a fake answer)
-  - `503 { "error": "unavailable" }` on model timeout or error
-  - An `X-Build` header with the commit SHA, as in FantasyFootball.
-- [ ] **1.6 `GET /api/health`** → `200 { "build": "<sha>" }`, with no model call. The UI calls it when the drawer opens, so the Function is awake by the time the visitor has typed (hides most of the cold start).
-- [ ] **1.7 Local dev.** `local.settings.json` (git-ignored) with Azurite for storage and your `az login` for Foundry; `local.settings.example.json` committed. CORS for `http://localhost:5173` in `Host.CORS`.
-- [ ] **1.8 `infra/main.bicep`** (copied and trimmed from FantasyFootball: no SQL, no Static Web App)
-  - Params: `namePrefix` (e.g. `jtassistant`), `alertEmail`, `allowedOrigins` (default `['https://jacktreadwell.com', 'https://www.jacktreadwell.com']`), `foundryAccountName` (`proj-portfolio-slm-resource`), `foundryDeployment`, and `ipHashSalt` (`@secure()`, default `newGuid()`). The secret rotates on each deploy and exists only in the Function's settings; 2.1 derives a daily key from it.
-  - Resources: Log Analytics (30-day retention, daily cap) + App Insights; storage (`allowSharedKeyAccess: false`, no public blobs) with the `deployments` container, the `ratelimits` table and the `assistant-logs` container; Flex Consumption plan (`FC1`); Function app (`dotnet-isolated` `10.0`, 512 MB, system-assigned identity, CORS = `allowedOrigins`).
-  - **Lifecycle rule:** a `managementPolicies` rule deletes blobs under `assistant-logs/` 90 days after last modification (append blobs support delete).
-  - **Role assignments:** the Function's identity gets the three storage data roles (as in FantasyFootball) and **Foundry User** (`53ca6127-db72-4b80-b1b0-d745d6d5456d`), scoped to the existing Foundry account through an `existing` resource reference.
-  - Outputs: `functionAppName`, `functionAppUrl`.
-- [ ] **1.9 Unit tests** (xUnit) for everything in 1.3:
+- [x] **1.1 Projects.** `api/src/Portfolio.Assistant.Functions` (.NET 10 isolated worker, in the solution) with FantasyFootball's packages and versions: Worker 2.52.0, Worker.Sdk 2.1.0, Http.AspNetCore 2.1.1, Worker.OpenTelemetry, OpenTelemetry.Extensions.Hosting and the Azure Monitor exporter. `Program.cs` follows FantasyFootball's: `FunctionsApplication.CreateBuilder`, `ConfigureFunctionsWebApplication`, OpenTelemetry only when the connection string is set, `ValidateOnBuild` and `ValidateScopes`. `host.json` uses the OpenTelemetry telemetry mode. Test project `tests/Portfolio.Assistant.Functions.Tests`.
+  - `Azure.Identity`, `Azure.Data.Tables` and `Azure.Storage.Blobs` are added by the tasks that first use them (1.4, 2.1, 2.2), so no package sits unused.
+- [x] **1.2 Knowledge packaging.** The Functions project copies `api/knowledge/**` to `knowledge/` in its output. `AddKnowledgeBase(folder)` (in `ServiceCollectionExtensions`, via `KnowledgeFiles.Load`) reads the files during startup and registers one shared `KnowledgeBase`. A missing file (`FileNotFoundException`), a blank Markdown file (`ArgumentException` naming it, checked in `KnowledgeBase.Create`) or a `links.json` with no links (`InvalidDataException`) stops the app starting. 12 tests, run against copies of the real knowledge files.
+- [x] **1.3 Core (pure functions, test-first; 45 tests)**
+  - `AskRequestValidator.Validate(AskRequest?)` → `AskValidation.Valid(question, history)` or `AskValidation.Invalid(detail)`. `question` trimmed, 1–500 chars; `history` ≤ 4 turns (8 messages), roles `user`/`assistant` only, each 1–1,500 chars; the detail names the field, e.g. `history[1].role`. The 16 KB body cap belongs to the endpoint (1.5), which stops reading before parsing.
+  - `PromptBuilder`: already existed (system message, then history, then the question).
+  - `LinkExtractor.Extract(modelText, knownLinks)` → `AnswerWithLinks(text, links)`. It finds a `Links:` line on its own line (any case, lenient, so a garbled line is still removed) or a well-formed one ending a sentence, splits on commas, trims, lowercases and dedupes. It keeps IDs present in `links.json`, at most 3, in order, with their labels. **The answer ends at the first Links line**, as in the eval grader: text after it is the model running on, so the visitor never sees it. (The original spec said the last line.) It turns Markdown links into their text and removes bare `http(s)://` and `www.` addresses; email addresses and the LinkedIn handle stay.
+  - `RateLimitPolicy.Decide(limits, visitorUsage, globalCount, now)` → `RateLimitDecision.Allowed(newVisitorUsage, newGlobalCount)` or `RateLimitDecision.Denied(retryAfterSeconds)`. The minute window is fixed and starts with the visitor's first question in it. Daily limits wait until UTC midnight. The longest applicable wait wins, rounded up to at least 1 s, and a denied question changes no counts.
+- [x] **1.4 Foundry client behind `IAnswerModel`**
+  - `ClaudeAnswerModel` (Anthropic.Foundry, thinking off, low effort, 400 max tokens) answers each `Prompt`. A refusal (`stop_reason: refusal`, how the content filter shows up) maps to the fixed `Filtered` reply, not an exception.
+  - `services.AddClaudeAnswerModel(credential)` in the Foundry project binds `FoundryOptions` from the `Foundry` section and registers `IAnswerModel`: `Foundry__Endpoint` (required, https), `Foundry__Deployment` (default `claude-haiku-5-5`), `Foundry__MaxRetries` (default 1, at most 2, for 408/429/5xx) and `Foundry__TimeoutSeconds` (default 12 per attempt). The settings are validated at startup (`ValidateOnStart`), including that retries × timeout can never keep a visitor waiting more than 30 s. 9 tests.
+  - `Program.cs` signs in with the Function's system-assigned managed identity, falling back to your `az login` locally (`ChainedTokenCredential`; `DefaultAzureCredential` picked up the wrong account in the eval runner). `ClaudeAnswerModel.ForFoundry` now takes the attempt timeout: 12 s from these settings, 30 s in the eval runner.
+  - No temperature setting: Haiku 5.5 rejects non-default sampling parameters. The REST spike and the Phi-era interface notes no longer apply.
+- [x] **1.5 `POST /api/ask`** (anonymous, `AskFunction`). Order: read at most 16 KB → validate → rate limit → model → extract links → respond. Logging comes in 2.2. 27 tests:
+  - `200 { "answer": "...", "links": [{ "id", "label" }] }`, the reply passed through `LinkExtractor`.
+  - `400 { "error": "invalid", "detail": "..." }` for a body over 16 KB (refused after reading one byte past the cap), non-JSON, or anything `AskRequestValidator` rejects. An invalid request never reaches the rate limiter or the model.
+  - `429 { "error": "rate_limited", "retryAfterSeconds": n }` plus a `Retry-After` header; the model isn't called.
+  - `200` with the fixed polite refusal when the content filter blocks the question or answer (`ModelAnswer.Filtered`).
+  - `503 { "error": "unavailable" }` on an HTTP error or timeout from the model, logged as an error with the deployment name but never the question. A visitor who disconnects gets nothing (the cancellation propagates).
+  - An `X-Build` header with the commit SHA on every response (`Build.Commit`, as in FantasyFootball), ready for 1.6.
+  - **Rate limiting:** `InMemoryRateLimiter`, built on `RateLimitPolicy`, is the rate limiter; the app runs on one instance (see 2.1). Limits come from `Limits__PerMinute`, `Limits__PerDay` and `Limits__GlobalPerDay` (defaults 5, 30, 300; below 1 stops startup). Addresses are held only in memory and dropped at UTC midnight.
+  - **The visitor is the *last* `X-Forwarded-For` entry**, not the first: a visitor can send their own header, and Azure's front end appends the address it saw, so earlier entries could be forged to dodge the limits. It falls back to the connection's address. Confirm on the deployed app that Azure appends rather than replaces (1.11).
+  - Run in the Functions host in 1.7: all responses checked by hand.
+- [x] **1.6 `GET /api/health`** (`HealthFunction`) → `200 { "build": "<sha>" }` with the `X-Build` header and `Cache-Control: no-store` (a cached reply wouldn't wake the app), with no model call. The UI calls it when the drawer opens, so the Function is awake by the time the visitor has typed (hides most of the cold start). 2 tests. Both endpoints set the header through `Build.AddHeader`.
+- [x] **1.7 Local dev** (2026-10-21). `local.settings.example.json` is committed and `local.settings.json` is git-ignored (`api/**/local.settings.json`). The example sets the worker runtime, a placeholder `Foundry__Endpoint`, the `Limits__*` defaults and `Host.CORS = http://localhost:5173`; 3 tests keep it in step with what startup requires. `api/README.md` says how to run it.
+  - **No Azurite:** with `AzureWebJobsStorage` empty the host serves HTTP fine and logs only a storage health warning. Azurite comes with question logging (2.2).
+  - **Checked by hand with `func start`:** health 200 with the build, `X-Build` and `no-store`; a real question returned a correct answer with the SPIE link in 6 s (sign-in included); invalid JSON gave a 400; with `Limits__PerMinute=1` the second question got a 429 with `Retry-After: 55`; a CORS preflight from `http://localhost:5173` was allowed and one from another origin got no `Access-Control-Allow-Origin`; a non-https `Foundry__Endpoint` stopped the worker with the validation message. The `internal` function classes run fine in the host.
+  - **Two bugs found by running it, fixed test-first:**
+    - Local sign-in took 100 s and then failed: `ChainedTokenCredential` tried the managed identity first, and off Azure that probe retried five times and threw instead of falling through. `FoundryCredential.For(IDENTITY_ENDPOINT)` now picks the managed identity where Azure provides one and `az login` otherwise.
+    - That failure surfaced as a 500, not a 503: a sign-in error isn't an `HttpRequestException`. Any failure behind the model is now a 503 with an error log, and only the visitor's own cancellation propagates; `docs/standards.md` records why this isn't a fallback.
+  - Testing note: on Windows an empty environment variable counts as unset, so `Foundry__Endpoint= func start` doesn't blank the setting; use an invalid value to test validation.
+- [x] **1.8 `infra/main.bicep`** (2026-10-21; adapted from FantasyFootball's, no SQL or Static Web App). It follows Microsoft's Bicep best practices and the infrastructure standards adopted into `docs/standards.md` from FantasyFootball's sections 4 and 5. `az bicep lint` passes with no warnings (`infra/bicepconfig.json` adds `use-recent-api-versions`), and it builds.
+  - **Params:** `namePrefix` (default `jtassistant`), `location`, `foundryAccountName` (no default: the template doesn't name resources it doesn't own), `foundryDeployment` (default `claude-haiku-5-5`) and `allowedOrigins` (`string[]`, default the two jacktreadwell.com origins). `alertEmail` waits for the alerts in 2.5 and `ipHashSalt` went with the 2.1 redesign.
+  - **Resources:** Log Analytics (30-day retention, 0.16 GB daily cap) and App Insights. Storage: shared keys off, no public blobs, the `deployments` and `assistant-logs` containers, and a lifecycle rule deleting `assistant-logs/` append blobs 90 days after their last write. A Flex Consumption plan (`FC1`). The Function App: `dotnet-isolated` 10.0, 512 MB, **`maximumInstanceCount: 1`**, system-assigned identity, HTTPS only, TLS 1.2, FTPS off, CORS = `allowedOrigins`. Each resource states its monthly cost in a comment.
+  - **App settings:** `AzureWebJobsStorage__accountName` (identity-based), the App Insights connection string, `Foundry__Endpoint` read from the existing account's `endpoints['AI Foundry API']` (not assembled by hand), and `Foundry__Deployment`. The `Limits__*` defaults apply.
+  - **Role assignments, each scoped to one resource:** Storage Blob Data Owner on the storage account (the host, the deployment package and the logs are all blobs; no queue or table role) and Foundry User on the existing Foundry account (found with `existing`).
+  - **No `dependsOn`:** the deployment URL names the container, which makes it an implicit dependency.
+  - **Read-only `what-if` against `rg-portfolio-ai-prod`:** 12 resources to create, none modified or deleted; the existing Foundry account, its project and the old Jules resources are left alone. Nothing was deployed. The first real deploy comes with 1.11, after you approve 1.10.
+- [x] **1.9 Unit tests** (xUnit) for everything in 1.3, written test-first with 1.3 and 1.5 (the body-size cap and the in-memory counts are covered there):
   - validation edge cases: empty, 500/501 chars, 5 turns, bad role
   - link extraction: valid, unknown ID, more than 3 IDs, no line, line not last, Markdown links, URL stripping
   - rate-limit windows, with an injected clock
-- [ ] **1.10 Deploy identity** (You approve; changes Azure permissions). `myGitHubDeployIdentity` can only touch the old Function today. It needs:
-  - **Contributor** on `rg-portfolio-ai-prod`, to run the Bicep.
-  - **Role Based Access Control Administrator** on the resource group, with a condition that it may only assign the three storage roles and Foundry User (as in FantasyFootball's runbook step 4).
-  - A second federated credential for `repo:flambeauRiverTours/flambeauRiverTours.github.io:environment:production` if the workflow uses a `production` environment (the existing one only trusts the `main` branch).
-  - A check that the repo's `AZURE_CLIENT_ID` secret is this identity's client ID.
-- [ ] **1.11 `.github/workflows/api.yml`**, modelled on FantasyFootball's `deploy.yml`: runs on push to `main` with `paths: [api/**, infra/**]` and on `workflow_dispatch`.
-  - `infra` job: `az deployment group create -g rg-portfolio-ai-prod --template-file infra/main.bicep …`
-  - `functions` job: `dotnet test`, `dotnet publish`, `Azure/functions-action`.
-  - Smoke step: poll `/api/health` until `build` equals `$GITHUB_SHA` (up to ~2 min).
-  - Actions pinned to commit SHAs, as in FantasyFootball.
+- [x] **1.10 Deploy identity** (you ran it 2026-10-21; checked). `myGitHubDeployIdentity` (a user-assigned managed identity) now has:
+  - **Contributor** on `rg-portfolio-ai-prod`, to run the Bicep and deploy the code.
+  - **Role Based Access Control Administrator** on the resource group, with a condition limiting role-assignment writes and deletes to Storage Blob Data Owner and Foundry User (the two roles `main.bicep` assigns).
+  - Federated credentials for pushes to `main` (existing) and for `pull_request` (new, for the `what-if` preview). No `production` environment, so no credential for one.
+  - `AZURE_CLIENT_ID` re-set to this identity's client ID. The old Website Contributor on the Jules Function goes in 4.5.
+- [ ] **1.11 `.github/workflows/api.yml`** (written 2026-10-21; `actionlint` 1.7.12 passes; first run needs your commit and push). Adapted from FantasyFootball's `ci.yml` and `deploy.yml`.
+  - Runs on pull requests and pushes to `main` touching `api/**`, `infra/**` or the workflow (not Markdown), and by hand.
+  - Every run: build, test, `dotnet format --verify-no-changes` and a vulnerable-package check (a vulnerable NuGet package, direct or transitive, fails it; deprecated ones are only reported). Plus the knowledge checks (`npm test`: prompt budget, link IDs, FAQ dates), since the knowledge ships with the Function, and `actionlint` (pinned version and checksum). All three gate the deploy.
+  - `.github/dependabot.yml` (2026-10-21): weekly updates for NuGet (`/api`, grouped like FantasyFootball's, FluentAssertions held on 7.x for its licence), npm (`/`) and the GitHub Actions pins.
+  - Pull requests: a Bicep `what-if` against the resource group.
+  - Pushes to `main`: `infra` deploys `main.bicep`, then `functions` publishes with `SourceRevisionId` set to the commit and deploys with `Azure/functions-action`. Then it waits until `/api/health` sends this commit as `X-Build`, and asks one real question (under a cent), retrying for a few minutes while the new Foundry role assignment applies.
+  - Deploys are never cancelled midway; a newer push only cancels an older pull-request run. Actions are pinned to the same commit SHAs as FantasyFootball. No GitHub environment, because the `main` credential trusts the branch.
+  - Repo variables: `AZURE_RESOURCE_GROUP_NAME` (exists) and **`FOUNDRY_ACCOUNT_NAME` (you set it)**, so the template names no resource it doesn't own.
+  - **After the first deploy:** check that Azure appends the visitor's address to `X-Forwarded-For`. Send six questions within a minute, each with a different forged `X-Forwarded-For`; the sixth should get a 429 (about half a cent).
 - **Done when:** `curl` to the deployed `/api/ask` returns an answer with links; a request from an origin that isn't allowed gets no CORS header; tests pass in CI.
 
 ## Phase 2: guardrails and logging (≈ 1 day)
 
-- [ ] **2.1 Rate limiting** (Table Storage, table `ratelimits`)
-  - Client IP from the first entry of `X-Forwarded-For`.
-  - **Daily key:** `dailyKey = HMAC-SHA256(ipHashSalt, yyyyMMdd)` (UTC date), then `ipHash = HMAC-SHA256(dailyKey, ip)`, first 16 hex chars. The same visitor gets a different hash each day, so hashes can't be linked across days. Don't use the date itself as the salt: it isn't secret, and all ~4.3B IPv4 addresses can be brute-forced in minutes. A pure function in Core (`IpHasher`), written test-first: same IP and day → same hash; different day → different hash; different secret → different hash.
-  - One row per IP per day (`PartitionKey = yyyyMMdd`, `RowKey = ipHash`) holding `DayCount`, `MinuteStart` and `MinuteCount`, so the 5/min and 30/day limits need one read and one write. One global row (`RowKey = "_global"`) for the 300/day cap.
-  - Updates use the ETag (optimistic concurrency) and retry up to 3 times on conflict. If storage fails, **deny** (fail closed), so storage problems can't remove the cost cap.
-  - Limits in settings (`Limits__PerMinute`, `Limits__PerDay`, `Limits__GlobalPerDay`), so you can change them without a deploy.
-  - **Daily cleanup (required):** a timer Function at 00:15 UTC deletes every `ratelimits` partition older than yesterday, so no IP-derived data lives longer than about 48 hours. Unit-test the cutoff date logic; check in Azure that yesterday's rows are gone the next morning.
-  - Side effect, accepted: a visitor's per-minute count resets at midnight UTC.
+- [x] **2.1 Rate limiting** (redesigned 2026-10-21; built in 1.5): `InMemoryRateLimiter` on a single instance replaces the Table Storage design.
+  - The Function app runs with `maximumInstanceCount: 1` (Flex Consumption allows 1–1,000), so its in-memory counts are the only counts. One instance handles far more than the Haiku deployment's ~10 questions a minute.
+  - Dropped: the `ratelimits` table, the `IpHasher` daily-key scheme and its `ipHashSalt` secret, ETag retries, fail-closed handling for storage outages, and the nightly cleanup timer. No IP-derived data is ever written anywhere: addresses stay in memory and are dropped at UTC midnight.
+  - Accepted trade-off: a restart, deploy or scale-to-zero after idling starts the counts afresh. An abuser can't cause any of those, and spend stays capped by the deployment's 50k tokens a minute and the budget alert (2.4).
+  - Limits come from settings (`Limits__PerMinute`, `Limits__PerDay`, `Limits__GlobalPerDay`; defaults 5, 30, 300), validated at startup. The visitor is the last `X-Forwarded-For` entry (1.5); confirm on the deployed app that Azure appends it (1.11).
 - [ ] **2.2 Question logging** (container `assistant-logs`, one append blob per UTC day: `yyyy/MM/dd.jsonl`)
   - One line per request: `ts`, `requestId`, `outcome` (`ok` / `invalid` / `rate_limited` / `filtered` / `model_error`), `question`, `historyTurns`, `answer`, `links`, `deployment`, `promptVersion`, `latencyMs`, `inputTokens`, `outputTokens`.
-  - **No IP hash in the logs.** Abuse within a day shows up in the rate-limit counters, and the logs are kept for 90 days, so IP-derived data stays out of them.
+  - **No IP-derived data in the logs.** Rate limiting keeps addresses only in memory for a day, and the logs are kept for 90 days, so addresses and hashes stay out of them.
   - `question` and `answer` are left out for `invalid` and `rate_limited` requests. They have no review value, and it limits what bots can push into your logs.
   - A logging failure is recorded in App Insights but never fails the visitor's request.
   - Question and answer text goes **only** to the blob (deleted after 90 days), never to App Insights traces.
 - [ ] **2.3 Content filter.** The deployment uses `Microsoft.DefaultV2`. Confirm in a test that a blocked prompt comes back as a filter result and maps to the polite refusal (1.4, 1.5). Keep the default; don't loosen it.
 - [ ] **2.4 Budget** (`infra/budget.bicep`, deployed by hand as in FantasyFootball): $5/month on `rg-portfolio-ai-prod`, alerts at 50% actual and 100% forecast, sent to your email.
-- [ ] **2.5 Alerts:** an App Insights alert on the `model_error` rate (e.g. more than 5 in 15 min) and another when the global daily cap is hit, so you know when the assistant is down or under attack.
+- [ ] **2.5 Alerts:** an App Insights alert on the `model_error` rate (e.g. more than 5 in 15 min) and another when the global daily cap is hit, so you know when the assistant is down or under attack. The deploy's smoke question retries for a few minutes while a new role assignment applies, logging model errors as it goes, so set the threshold above one deploy's worth.
 - **Done when:** with low limits set in settings, the 6th request in a minute and the 31st in a day get 429s; the log blob has the expected lines; a jailbreak prompt from the eval set is handled.
 
 ## Phase 3: UI (≈ 1 day)
@@ -199,7 +209,7 @@ scripts/
   - `stportfolioaichat`
   - `kv-portfolio-ai-flambeau`, after checking which secrets it holds
   - `myGitHubDeployIdentity`'s Website Contributor assignment on the old app
-- [ ] **4.6 CI for the site** (new `.github/workflows/ci.yml` on pull requests and pushes): `npm ci`, `npm run lint`, `npm run build`, then `npm run build:knowledge && git diff --exit-code api/knowledge`, so the assistant's knowledge can't drift from the page. `deploy.yml` stays as it is.
+- [ ] **4.6 CI for the site** (new `.github/workflows/ci.yml` on pull requests and pushes): `npm ci`, `npm run lint`, `npm run build`, then `npm run build:knowledge && git diff --exit-code api/knowledge`, so the assistant's knowledge can't drift from the page. Also from the Phase 1 review: `npm audit --omit=dev` (the npm half of the vulnerable-package standard), and pin `deploy.yml`'s actions to commit SHAs (they're on tags like `@v4`, against the CI standard). Otherwise `deploy.yml` stays as it is.
 - [ ] **4.7 Eval workflow** (`.github/workflows/evals.yml`, on `workflow_dispatch` and on changes to `api/knowledge/**`): runs the eval runner through OIDC (the deploy identity needs Foundry User for this) and uploads the report. Fails if the launch bar isn't met.
 - [ ] **4.8 Soft launch.** Deploy the site with the entry points. Read the logs daily for the first week, then weekly, and add every wrong answer to `questions.jsonl`.
 - [ ] **4.9 Write-up** (optional): a short "how I built it" for the Projects section, like Fantasy Football's (model chosen by evals, cost caps, privacy).

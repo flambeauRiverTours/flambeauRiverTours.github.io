@@ -1,0 +1,62 @@
+version: 2
+
+updates:
+  # the assistant API; restore runs from nuget.org only, as there's no NuGet.config
+  - package-ecosystem: nuget
+    directory: /api
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      microsoft-extensions:
+        patterns:
+          - Microsoft.Extensions.*
+      azure-functions:
+        patterns:
+          - Microsoft.Azure.Functions.*
+      opentelemetry:
+        patterns:
+          - OpenTelemetry.*
+          - Azure.Monitor.OpenTelemetry.*
+      anthropic:
+        patterns:
+          - Anthropic*
+      xunit:
+        patterns:
+          - xunit*
+    ignore:
+      # 8.x moved to the Xceed Community Licence, which is non-commercial only; 7.x is pinned on purpose
+      - dependency-name: FluentAssertions
+        versions:
+          - '>=8.0.0'
+
+  # the site and the knowledge scripts
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      # one pull request for routine updates; a major version still gets its own
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  # keeps the commit-SHA pins in every workflow current
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: ci

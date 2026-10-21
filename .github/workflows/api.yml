@@ -1,0 +1,191 @@
+name: api
+# the assistant API: test every change, preview infrastructure on pull requests, deploy from main
+on:
+  pull_request:
+    paths:
+      - 'api/**'
+      - 'infra/**'
+      - '.github/workflows/api.yml'
+      - '!**/*.md'
+  push:
+    branches: [main]
+    paths:
+      - 'api/**'
+      - 'infra/**'
+      - '.github/workflows/api.yml'
+      - '!**/*.md'
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+# a newer push to a pull request cancels its older run; a deploy is never cancelled midway
+concurrency:
+  group: api-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: api
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('api/**/*.csproj', 'api/Directory.Build.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+      - run: dotnet restore Portfolio.Assistant.slnx
+      - run: dotnet build Portfolio.Assistant.slnx --no-restore
+      - run: dotnet test Portfolio.Assistant.slnx --no-build
+      - run: dotnet format Portfolio.Assistant.slnx --verify-no-changes --no-restore
+      - name: No vulnerable packages
+        run: |
+          dotnet list Portfolio.Assistant.slnx package --vulnerable --include-transitive 2>&1 | tee vulnerable.txt
+          ! grep -q 'has the following vulnerable packages' vulnerable.txt
+      # reported, not failed: a deprecation is a migration to plan, not a defect
+      - name: Deprecated packages
+        continue-on-error: true
+        run: |
+          dotnet list Portfolio.Assistant.slnx package --deprecated 2>&1 | tee deprecated.txt
+          ! grep -q 'has the following deprecated packages' deprecated.txt
+
+  # the knowledge ships with the Function, so its checks (prompt budget, link IDs, FAQ dates) gate the deploy;
+  # the site's own CI is task 4.6
+  knowledge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  actions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ACTIONLINT_VERSION: 1.7.12
+      ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: actionlint
+        run: |
+          set -euo pipefail
+          command -v shellcheck
+          file=actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz
+          curl -fsSL -o "$file" "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/$file"
+          echo "$ACTIONLINT_SHA256  $file" | sha256sum -c -
+          tar -xzf "$file" actionlint
+          ./actionlint -color
+
+  # infrastructure changes are reviewed as a diff before they merge
+  preview:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3
+        with:
+          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - name: what-if
+        env:
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP_NAME }}
+          FOUNDRY_ACCOUNT: ${{ vars.FOUNDRY_ACCOUNT_NAME }}
+        run: |
+          az deployment group what-if \
+            --resource-group "$RESOURCE_GROUP" \
+            --template-file infra/main.bicep \
+            --parameters foundryAccountName="$FOUNDRY_ACCOUNT"
+
+  infra:
+    if: github.event_name != 'pull_request'
+    needs: [test, knowledge, actions]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      functionAppName: ${{ steps.deploy.outputs.functionAppName }}
+      functionAppUrl: ${{ steps.deploy.outputs.functionAppUrl }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3
+        with:
+          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - id: deploy
+        env:
+          RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP_NAME }}
+          FOUNDRY_ACCOUNT: ${{ vars.FOUNDRY_ACCOUNT_NAME }}
+        run: |
+          az deployment group create \
+            --name "api-${{ github.run_number }}" \
+            --resource-group "$RESOURCE_GROUP" \
+            --template-file infra/main.bicep \
+            --parameters foundryAccountName="$FOUNDRY_ACCOUNT" \
+            -o json > out.json
+          for key in functionAppName functionAppUrl; do
+            echo "$key=$(jq -r ".properties.outputs.$key.value" out.json)" >> "$GITHUB_OUTPUT"
+          done
+
+  functions:
+    needs: infra
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: 10.0.x
+      # the commit becomes the build's X-Build header, which the smoke test waits for
+      - run: dotnet publish api/src/Portfolio.Assistant.Functions/Portfolio.Assistant.Functions.csproj -c Release -o publish -p:SourceRevisionId=${{ github.sha }}
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3
+        with:
+          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - uses: Azure/functions-action@c5060b3b8bb1ebbcb531abd00c822ecbaa8ea656 # v1
+        with:
+          app-name: ${{ needs.infra.outputs.functionAppName }}
+          package: publish
+      # the live app may still serve the previous build through the cold start
+      - name: The API serves this run's build
+        env:
+          API: ${{ needs.infra.outputs.functionAppUrl }}
+        run: |
+          for _ in $(seq 1 20); do
+            if curl -fsS -D headers.txt -o /dev/null "$API/api/health" && grep -qi "^x-build: $GITHUB_SHA" headers.txt; then
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "::error::$API never served this run's build ($GITHUB_SHA)"
+          exit 1
+      # one real question (under a cent) proves the Foundry role and endpoint work;
+      # a new role assignment can take minutes to apply
+      - name: The API answers a question
+        env:
+          API: ${{ needs.infra.outputs.functionAppUrl }}
+        run: |
+          for _ in $(seq 1 10); do
+            if curl -fsS -o answer.json -X POST "$API/api/ask" -H 'Content-Type: application/json' -d '{"question":"Where does Jack work now?"}' \
+               && jq -e '.answer | length > 0' answer.json; then
+              exit 0
+            fi
+            sleep 30
+          done
+          echo "::error::$API/api/ask never answered"
+          exit 1

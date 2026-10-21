@@ -3,10 +3,12 @@
     <Project Path="src/Portfolio.Assistant.Core/Portfolio.Assistant.Core.csproj" />
     <Project Path="src/Portfolio.Assistant.Evals/Portfolio.Assistant.Evals.csproj" />
     <Project Path="src/Portfolio.Assistant.Foundry/Portfolio.Assistant.Foundry.csproj" />
+    <Project Path="src/Portfolio.Assistant.Functions/Portfolio.Assistant.Functions.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Portfolio.Assistant.Core.Tests/Portfolio.Assistant.Core.Tests.csproj" />
     <Project Path="tests/Portfolio.Assistant.Evals.Tests/Portfolio.Assistant.Evals.Tests.csproj" />
     <Project Path="tests/Portfolio.Assistant.Foundry.Tests/Portfolio.Assistant.Foundry.Tests.csproj" />
+    <Project Path="tests/Portfolio.Assistant.Functions.Tests/Portfolio.Assistant.Functions.Tests.csproj" />
   </Folder>
 </Solution>

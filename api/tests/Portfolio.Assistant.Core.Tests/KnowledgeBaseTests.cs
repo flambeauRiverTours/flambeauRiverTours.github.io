@@ -44,8 +44,42 @@ namespace Portfolio.Assistant.Core.Tests
             windows.PromptVersion.Should().Be(unix.PromptVersion);
         }
 
+        // a missing or emptied knowledge file must stop the Function starting, not let it answer from nothing
+        [Fact]
+        public void A_blank_knowledge_file_is_rejected_by_name()
+        {
+            FluentActions.Invoking(() => Create(rules: " \n")).Should().Throw<ArgumentException>().Which.ParamName.Should().Be("systemPrompt");
+            FluentActions.Invoking(() => Create(site: "")).Should().Throw<ArgumentException>().Which.ParamName.Should().Be("site");
+            FluentActions.Invoking(() => Create(faq: "\r\n")).Should().Throw<ArgumentException>().Which.ParamName.Should().Be("faq");
+        }
+
         [Fact]
         public void The_links_are_kept() =>
             Create().Links.Should().Equal(Links);
+
+        [Fact]
+        public void Loading_reads_the_four_knowledge_files_by_name()
+        {
+            var files = new Dictionary<string, string>
+            {
+                ["system-prompt.md"] = "Rules.",
+                ["site.md"] = "# [about] About\nJack.",
+                ["faq.md"] = "## FAQ",
+                ["links.json"] = """[{ "id": "about", "label": "About" }]""",
+            };
+
+            var loaded = KnowledgeBase.Load(fileName => files[fileName]);
+
+            loaded.SystemMessage.Should().Be(Create().SystemMessage);
+            loaded.Links.Should().Equal(Links);
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("[]")]
+        [InlineData("null")]
+        public void Loading_a_links_file_without_links_is_rejected(string linksJson) =>
+            FluentActions.Invoking(() => KnowledgeBase.Load(fileName => fileName == "links.json" ? linksJson : "Text."))
+                .Should().Throw<InvalidDataException>().WithMessage("*links.json*");
     }
 }

@@ -28,3 +28,5 @@ api/**/bin/
 api/**/obj/
 api/.vs/
 api/evals/results/self-test.md
+# local Function settings hold the real Foundry address; the example is committed
+api/**/local.settings.json

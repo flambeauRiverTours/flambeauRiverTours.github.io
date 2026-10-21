@@ -32,12 +32,13 @@ namespace Portfolio.Assistant.Foundry
 
         /// <summary>A model for a Claude deployment in a Foundry resource, signed in with an Azure credential.</summary>
         /// <param name="endpoint">The resource's <c>services.ai.azure.com</c> address.</param>
-        /// <param name="maxRetries">Retries for 408, 429 and 5xx; each attempt times out after 30 seconds.</param>
-        public static ClaudeAnswerModel ForFoundry(Uri endpoint, string deployment, TokenCredential credential, int maxRetries)
+        /// <param name="maxRetries">Retries for 408, 429 and 5xx.</param>
+        /// <param name="attemptTimeout">How long one attempt may take before it is abandoned or retried.</param>
+        public static ClaudeAnswerModel ForFoundry(Uri endpoint, string deployment, TokenCredential credential, int maxRetries, TimeSpan attemptTimeout)
         {
             // the Anthropic Foundry client builds its address from the resource name, the first part of the host
             var resource = endpoint.Host.Split('.')[0];
-            var client = new AnthropicFoundryClient(new AnthropicFoundryIdentityTokenCredentials(credential, resource)) { MaxRetries = maxRetries, Timeout = TimeSpan.FromSeconds(30) };
+            var client = new AnthropicFoundryClient(new AnthropicFoundryIdentityTokenCredentials(credential, resource)) { MaxRetries = maxRetries, Timeout = attemptTimeout };
             return new ClaudeAnswerModel(client, deployment);
         }
 

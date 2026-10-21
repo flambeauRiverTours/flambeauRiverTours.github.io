@@ -1,5 +1,4 @@
-﻿using System.Text.Json;
-using Azure.Identity;
+﻿using Azure.Identity;
 using Portfolio.Assistant.Core;
 using Portfolio.Assistant.Evals;
 using Portfolio.Assistant.Foundry;
@@ -54,12 +53,8 @@ return bar.Met ? 0 : 1;
 
 static (KnowledgeBase Knowledge, List<EvalCase> Cases) LoadInputs(string api, EvalOptions options)
 {
-    string Read(string relativePath) => File.ReadAllText(Path.Combine(api, relativePath));
-
-    // links.json is generated as a JSON array, never the literal null
-    var links = JsonSerializer.Deserialize<List<LinkTarget>>(Read("knowledge/links.json"), JsonSerializerOptions.Web)!;
-    var knowledge = KnowledgeBase.Create(Read("knowledge/system-prompt.md"), Read("knowledge/site.md"), Read("knowledge/faq.md"), links);
-    var cases = EvalCaseReader.Parse(Read("evals/questions.jsonl"))
+    var knowledge = KnowledgeBase.Load(fileName => File.ReadAllText(Path.Combine(api, "knowledge", fileName)));
+    var cases = EvalCaseReader.Parse(File.ReadAllText(Path.Combine(api, "evals", "questions.jsonl")))
         .Where(options.Selects)
         .Where(evalCase => !options.SelfTest || evalCase.PassExample is not null)
         .ToList();
@@ -82,7 +77,7 @@ static IAnswerModel? CreateModel(EvalOptions options, IReadOnlyList<EvalCase> ca
     }
 
     // a full run hits the deployment's rate limit constantly, so allow more retries than a visitor's request would get
-    return ClaudeAnswerModel.ForFoundry(uri, options.Deployment, new AzureCliCredential(), maxRetries: 7);
+    return ClaudeAnswerModel.ForFoundry(uri, options.Deployment, new AzureCliCredential(), maxRetries: 7, attemptTimeout: TimeSpan.FromSeconds(30));
 }
 
 // self-test reports go to one git-ignored file so they don't pile up next to real results; real reports are never replaced

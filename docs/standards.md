@@ -1,6 +1,6 @@
-# Engineering standards: C# and .NET (`api/`)
+# Engineering standards: the assistant API (`api/`, `infra/`)
 
-Adopted from the FantasyFootballWebsite repository's `docs/standards.md` (sections 1, 6 and 7), adapted from Sleeper and the league to Foundry and the assistant. Rules that only applied there are left out. The front end has no standards document yet.
+Adopted from the FantasyFootballWebsite repository's `docs/standards.md` (sections 1, 4, 5, 6 and 7), adapted from Sleeper and the league to Foundry and the assistant. Rules that only applied there are left out. The Bicep rules also follow Microsoft's [Bicep best practices](https://learn.microsoft.com/azure/azure-resource-manager/bicep/best-practices). The front end has no standards document yet.
 
 ## Build
 
@@ -57,9 +57,11 @@ Adopted from the FantasyFootballWebsite repository's `docs/standards.md` (sectio
 - Only transient failures may fall back or be retried
   - why: a silent fallback once hid a bug for days (FantasyFootball)
   - Authentication, configuration and programming errors stop the work
+- A failed model call, whatever the cause, is a 503 for the visitor and an error in the log
+  - why: it isn't a fallback (nothing is retried or made up), and a sign-in failure first showed up as an unexpected type
 - Logging failures never fail a visitor's request
-- The rate limiter fails closed
-  - why: a storage outage must not remove the cost cap
+- The Function runs on one instance and the rate limiter counts in its memory
+  - why: with no store, no outage can lift the cost cap, and no IP-derived data is ever written
 
 ## Logging
 
@@ -94,3 +96,58 @@ Adopted from the FantasyFootballWebsite repository's `docs/standards.md` (sectio
   - History belongs in `tasks/`, not in remarks
 - Documentation is terse and declarative
   - Summaries aim for one short line
+
+## Infrastructure (`infra/`)
+
+**Bicep**
+- The template follows Microsoft's Bicep best practices
+  - Parameters come first, each with a description; parameters that build names carry length limits
+  - Defaults are safe and cheap for anyone to deploy
+  - Symbolic names are lowerCamelCase and never end in `Name`
+  - Dependencies come from symbolic references, not `dependsOn`, `resourceId` or `reference`
+  - Child resources nest under their parent instead of building names from strings
+  - Outputs and settings use resource properties, never URLs assembled by hand
+  - Each resource uses a recent API version
+- `az bicep lint` passes with no warnings
+  - why: a warning left in becomes noise that hides the next real one
+- Values computed at deploy time never set immutable properties
+  - why: a monthly budget date broke every deploy in October (FantasyFootball); budgets live in a separate file deployed by hand
+- Resources the template doesn't own are found with `existing`, named by a parameter with no default
+  - why: the repository is public and names are identifiers
+
+**Identity and secrets**
+- Everything reaches Azure by managed identity; no keys or connection strings with secrets exist
+  - Storage has shared keys turned off
+  - Foundry's key auth is turned off before launch (task 4.4)
+- The Function's identity gets the fewest roles that work, each scoped to one resource
+- CI reaches Azure through OIDC with no stored credentials
+
+**Cost**
+- The Azure resources around the model stay under fifty cents a month
+  - why: a hobby site should never produce a real bill; the model itself is about fifty cents more
+- A budget alert covers the resource group (task 2.4)
+- New resources state their monthly cost up front, in a comment beside them
+- A daily telemetry cap stays inside the free grant
+
+**Observability**
+- An exception in the Function App raises an alert (task 2.5)
+  - why: a failure otherwise waits for someone to look
+
+## CI/CD (`.github/workflows/`)
+
+- A Bicep `what-if` runs on every pull request
+  - why: infrastructure changes get reviewed as a diff
+- `actionlint` checks every workflow on every pull request
+- Deploys run infrastructure, then the Function
+- A deploy is never cancelled midway
+  - why: a half-applied deploy is worse than a queue
+- The post-deploy check verifies the build this run made, by the API's `X-Build` commit
+  - why: the live app may still serve the previous build
+- Actions are pinned to commit SHAs and every installed tool to a version
+- Dependabot watches NuGet, npm and every action pin, weekly
+  - FluentAssertions stays on 7.x: 8.x is under a non-commercial licence
+- A vulnerable NuGet package, direct or transitive, fails the API build
+  - Deprecated packages are reported without failing it: a deprecation is a migration to plan, not a defect
+  - The site's npm packages get the same check in its own CI (task 4.6)
+- Never pipe large output into an early-exit reader such as `grep -q` or `head`
+  - why: `pipefail` turns the early exit into a false failure

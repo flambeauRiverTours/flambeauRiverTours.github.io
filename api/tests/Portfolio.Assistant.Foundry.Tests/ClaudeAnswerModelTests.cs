@@ -69,7 +69,7 @@ namespace Portfolio.Assistant.Foundry.Tests
             // hosts pass an endpoint and an Azure credential, so no Anthropic SDK type leaves this project
             var credential = new CountingCredential();
 
-            var model = ClaudeAnswerModel.ForFoundry(new Uri("https://my-resource.services.ai.azure.com"), "claude-haiku-5-5", credential, maxRetries: 2);
+            var model = ClaudeAnswerModel.ForFoundry(new Uri("https://my-resource.services.ai.azure.com"), "claude-haiku-5-5", credential, maxRetries: 2, attemptTimeout: TimeSpan.FromSeconds(10));
 
             model.Deployment.Should().Be("claude-haiku-5-5");
             credential.Calls.Should().Be(0);
