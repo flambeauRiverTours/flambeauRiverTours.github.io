@@ -9,7 +9,7 @@ import Sidebar from "../Sidebar/Sidebar";
 import ChatIcon from "../../assistant/ChatIcon";
 import React, { useState } from "react";
 import { ISectionData } from "../../datamodel/SectionData";
-import "./HeadBar.scss";
+import "./HeaderBar.scss";
 
 function HeaderBar(props: IHeaderInitializationProps) {
     const [showOffcanvas, setShowOffCanvas] = useState(false);

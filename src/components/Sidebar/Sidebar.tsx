@@ -3,7 +3,7 @@
  */
 import Stack from "react-bootstrap/Stack";
 import React from "react";
-import "./Siderbar.scss"
+import "./Sidebar.scss"
 import LinkIconsItem from "./LinkIconsItem";
 import ChatIcon from "../../assistant/ChatIcon";
 import { ISectionData, SectionGroup } from "../../datamodel/SectionData";

@@ -3,7 +3,7 @@
  */
 
 import Image from 'react-bootstrap/Image';
-import portraitImgUrl from '../../assets/1704245613526.jpg';
+import portraitImgUrl from '../../assets/portrait.jpg';
 import LinkIconsItem from '../Sidebar/LinkIconsItem';
 import { IHighlight, IProfile } from '../../datamodel/SectionData';
 

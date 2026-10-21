@@ -257,6 +257,7 @@ Adopted from the FantasyFootballWebsite repository's `docs/standards.md`, adapte
   - The site's production npm packages get the same check in `ci.yml`
 - The site deploys only after `ci.yml` passes: `deploy.yml` calls it
   - why: a commit that doesn't build once reached review (2026-10-21)
+- `main` changes only through a pull request whose `site` check passes (the `main` ruleset); so `ci.yml` has no path filter
 - `api/knowledge` matches what `npm run build:knowledge` writes from the page, checked in `ci.yml`
   - why: the assistant would otherwise answer from an older page
 - Never pipe large output into an early-exit reader such as `grep -q` or `head`
