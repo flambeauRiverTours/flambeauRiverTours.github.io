@@ -95,7 +95,7 @@ export class FullPageData {
         });
         sectionData.bodyTextSections.push({
             title: "",
-            body: <p>I'm relocating to Charlotte, North Carolina, in January 2027. If you're hiring, looking to collaborate on a project, or just want to chat about anything you find on this site, feel free to <a href="mailto:jack.treadwell.dev@gmail.com">email me</a> or reach out on <a href="https://www.linkedin.com/in/john-treadwell/">LinkedIn</a>. You can also <a href="/Jack-Treadwell-Resume.pdf">download my resume (PDF)</a>.</p>,
+            body: <p>I'm relocating to Charlotte, North Carolina, in January 2027. If you're hiring, looking to collaborate on a project, or just want to chat about anything you find on this site, feel free to <a href="mailto:jack.treadwell.dev@gmail.com">email me</a> or reach out on <a href="https://www.linkedin.com/in/john-treadwell/">LinkedIn</a>, or <a href="#ask">ask my assistant</a> a quick question. You can also <a href="/Jack-Treadwell-Resume.pdf">download my resume (PDF)</a>.</p>,
             style: BodyBlockStyle.contentBlock,
         });
         return sectionData;

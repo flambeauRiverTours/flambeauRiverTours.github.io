@@ -143,9 +143,13 @@ Design, risks and decisions: `tasks/llm-assistant-plan.md`. Eval history: `tasks
   - Keep the raw-format checks (the `Links:` line, no URLs); run content checks and link scoring on `LinkExtractor.Extract(raw, links)`, what visitors actually see.
   - Rerun the full set afterwards; expect a few format-only failures to turn into passes.
 - [ ] **4.8 Soft launch**
-  - Set `VITE_ASSISTANT_API_URL` in `.env.production` to 1.11's `functionAppUrl`.
-  - Add the About sentence's `#ask` link in `FullPageData.tsx`, then rerun `build:knowledge`.
-  - Browser check at both widths against the live API.
+  - [x] Set `VITE_ASSISTANT_API_URL` in `.env.production` to 1.11's `functionAppUrl` (`https://func-jtassistant.azurewebsites.net`; `scripts/production-env.test.ts` pins it)
+  - [x] Add the About sentence's `#ask` link in `FullPageData.tsx`, then rerun `build:knowledge` (2026-10-21; checked in the browser against the dev server: the link opens the drawer and clears the hash)
+  - [x] **The About sentence changes the prompt** (`850195bc5077` → `3479c80c4da0`: one clause in the About paragraph), so it was checked before launch, unjudged, about $0.05:
+    - Held-out set (spent, so a regression check only): 46/50 (92%), against 47/50 on `850195bc5077`. Different cases failed, each in 1–3 of 3 runs, none mentioning the assistant: two grader false positives (`ho-sens-religion-holidays` "which holidays he observes" inside a denial; `ho-trap-mobile-kotlin-swift` "hasn't … according to his site" not read as "not on the site"), an invented link ID the API drops (`ho-priv-residence-permit`), and an answer that left out the Epic references (`ho-faq-spie-phone-reference`). Not fixed: the held-out set isn't tuned on.
+    - Tuned `fact`, `faq`, `meta` and `links` (the categories the sentence could touch): 112/114. Both failures are the known "deny in the second sentence" pattern (`interview-wednesday`, `logi-commute-atlanta`).
+    - Reports: `api/evals/results/2026-10-21-claude-haiku-5-5-3479c80c4da0-heldout.md` and `…-3479c80c4da0.md`.
+  - [ ] Browser check at both widths against the live API (only possible on `jacktreadwell.com`: CORS allows only the live origins).
   - Read the logs daily for the first week, then weekly; add every wrong answer to `questions.jsonl`.
 - [ ] **4.9 Write-up** (optional): a short "how I built it" for the Projects section (model chosen by evals, cost caps, privacy)
 - **Done when:** the committed eval report meets the launch bar, key auth is off, the old resources are deleted, and CI is green.

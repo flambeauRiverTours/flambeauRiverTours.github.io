@@ -4,6 +4,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import Sidebar from "./Sidebar/Sidebar";
 import HeaderBar from "./Header/HeaderBar";
 import { stubMatchMedia } from "../testing/stubMatchMedia";
+import { FullPageData } from "../datamodel/FullPageData";
 
 describe("the assistant's entry points", () => {
     beforeAll(stubMatchMedia);
@@ -28,6 +29,13 @@ describe("the assistant's entry points", () => {
         fireEvent.click(screen.getByRole("link", { name: "Ask a question" }));
 
         expect(onNavigate).toHaveBeenCalledWith("ask", expect.anything());
+    });
+
+    it("show in the About section's contact sentence as a link to #ask", () => {
+        const about = new FullPageData().getSectionDataArray().find((section) => section.id === "about");
+        render(<>{about?.bodyTextSections.map((entry, index) => <div key={index}>{entry.body}</div>)}</>);
+
+        expect(screen.getByRole("link", { name: "ask my assistant" }).getAttribute("href")).toBe("#ask");
     });
 
     it("show in the phone header bar as an icon link", () => {

@@ -13,7 +13,7 @@ I'm Jack, a senior software engineer with eight years of experience building .NE
 
 I'm currently a Senior Software Engineer at SPIE in Berlin, where I'm helping migrate a large application for high-voltage power line design to modern .NET. Before that, I spent six years at Epic Systems focused on healthcare billing, including three years leading a team of nine developers.
 
-I'm relocating to Charlotte, North Carolina, in January 2027. If you're hiring, looking to collaborate on a project, or just want to chat about anything you find on this site, feel free to email me or reach out on LinkedIn. You can also download my resume (PDF).
+I'm relocating to Charlotte, North Carolina, in January 2027. If you're hiring, looking to collaborate on a project, or just want to chat about anything you find on this site, feel free to email me or reach out on LinkedIn, or ask my assistant a quick question. You can also download my resume (PDF).
 
 # [experience] Experience
 
