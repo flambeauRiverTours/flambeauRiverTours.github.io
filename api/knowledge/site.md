@@ -53,6 +53,11 @@ Cloud: Azure (Functions, Static Web Apps, SQL, Blob Storage), Bicep
 # [projects] Projects
 Below are some of the projects I work on in my free time, listed in reverse chronological order. You can find most of them on my GitHub.
 
+## [projects-assistant] AI Assistant: Ask About My Experience
+Oct 2026 · .NET 10, Azure Functions, Claude on Microsoft Foundry
+The assistant on this site, which answers questions about my experience from this site alone. Most of the work went into choosing the model and checking it doesn't make things up about me: three models compared, 389 test cases including a held-out set, and a second model checking every answer for claims the site doesn't support. The write-up covers how I chose the model and what the numbers really mean.
+External pages: Write-up (/assistant-write-up.html), Code (https://github.com/flambeauRiverTours/flambeauRiverTours.github.io/tree/main/api)
+
 ## [projects-fantasy-football] Real-Time Fantasy Football Scoreboard
 Aug – Oct 2026 · .NET 10, React, Azure
 A live leaderboard and analytics site for my fantasy football league. It pairs a React frontend with a .NET 10 backend on Azure Functions and Static Web Apps, uses Blob and SQL storage, and deploys through GitHub Actions. It keeps scores current while running for about $0.25 a month. The write-up covers the architecture, the constraints I designed around, and the problems I solved along the way.

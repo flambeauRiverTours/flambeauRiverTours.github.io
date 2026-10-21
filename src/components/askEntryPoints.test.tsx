@@ -3,11 +3,11 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import Sidebar from "./Sidebar/Sidebar";
 import HeaderBar from "./Header/HeaderBar";
-import { stubMatchMedia } from "../testing/stubMatchMedia";
+import { stubJsdomGaps } from "../testing/stubJsdomGaps";
 import { FullPageData } from "../datamodel/FullPageData";
 
 describe("the assistant's entry points", () => {
-    beforeAll(stubMatchMedia);
+    beforeAll(stubJsdomGaps);
     afterEach(cleanup);
 
     it("show in the sidebar as a link to #ask once the assistant is launched", () => {

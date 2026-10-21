@@ -5,14 +5,19 @@
     max-width: 100vw; // full width on phones
 }
 
+// only the conversation scrolls: the input and the notice stay in view however long it gets
 .assistantBody {
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    overflow: hidden;
 }
 
 .conversation {
     flex: 1;
+    min-height: 0; // lets a flex item shrink below its content, so it scrolls instead of growing
+    overflow-y: auto;
+    overscroll-behavior: contain; // reaching the end doesn't scroll the page behind the drawer
     display: flex;
     flex-direction: column;
     gap: 1rem;

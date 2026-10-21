@@ -195,6 +195,17 @@ export class FullPageData {
             style: BodyBlockStyle.titleBlock,
         });
         sectionData.bodyTextSections.push({
+            id: "projects-assistant",
+            title: "AI Assistant: Ask About My Experience",
+            subtitle: "Oct 2026 · .NET 10, Azure Functions, Claude on Microsoft Foundry",
+            body: <p>The <a href="#ask">assistant on this site</a>, which answers questions about my experience from this site alone. Most of the work went into choosing the model and checking it doesn't make things up about me: three models compared, 389 test cases including a held-out set, and a second model checking every answer for claims the site doesn't support. The write-up covers how I chose the model and what the numbers really mean.</p>,
+            style: BodyBlockStyle.contentBlock,
+            links: [
+                { label: "Write-up", href: "/assistant-write-up.html" },
+                { label: "Code", href: "https://github.com/flambeauRiverTours/flambeauRiverTours.github.io/tree/main/api" },
+            ],
+        });
+        sectionData.bodyTextSections.push({
             id: "projects-fantasy-football",
             title: "Real-Time Fantasy Football Scoreboard",
             subtitle: "Aug – Oct 2026 · .NET 10, React, Azure",
