@@ -154,12 +154,12 @@ Adopted from the FantasyFootballWebsite repository's `docs/standards.md`, adapte
 **Motion and performance**
 - Motion is decorative and never carries information
   - The spinner always comes with "Thinking…"
-- Initial JavaScript stays under 125 KB gzipped (66.7 KB on 2026-10-21; enforced in CI by task 4.6)
+- Initial JavaScript stays under 125 KB gzipped (65.8 KB on 2026-10-21; enforced by `ci.yml`)
   - why: a budget catches dependency bloat before it ships
 - Features a visitor may never open load lazily, in their own chunk
   - The drawer and the API client load on first open
-- A slow first answer says why
-  - why: a cold start can take several seconds; after 8 s the drawer says the assistant may be waking up
+- A slow first answer is acknowledged
+  - why: a cold start can take several seconds; after 8 s "Thinking…" becomes "Still thinking…"
 
 **Testing**
 - Component tests run in jsdom (`// @vitest-environment jsdom`) and call `cleanup()` after each test
@@ -177,8 +177,11 @@ Adopted from the FantasyFootballWebsite repository's `docs/standards.md`, adapte
 - Licences come from FantasyFootball's allow list
   - Anything that ships: `MIT`, `MIT-0`, `Apache-2.0`, `BSD-2-Clause`, `BSD-3-Clause`, `ISC`, `0BSD`
   - Build and test tools also: `MPL-2.0`, `BlueOak-1.0.0`, `CC0-1.0`
-  - Checked by hand on 2026-10-21 for the Phase 3 test tools (47 new packages, all on the list); automated in task 4.6
-- A vulnerable production package fails the site's build (task 4.6)
+  - `npm run check:licences` checks every package in the lockfile, in CI
+  - Exceptions are pinned to an exact version, so an upgrade is checked again (`scripts/licences.ts`)
+  - **Exception:** `argparse` 2.0.1 (Python-2.0, permissive), a dev package through ESLint 8's `js-yaml` (accepted 2026-10-21)
+- A vulnerable production package fails the site's build (`npm audit --omit=dev`)
+  - Dev advisories don't fail it: they never ship, and Dependabot raises them
 
 ## Infrastructure (`infra/`)
 
@@ -236,6 +239,10 @@ Adopted from the FantasyFootballWebsite repository's `docs/standards.md`, adapte
   - FluentAssertions stays on 7.x: 8.x is under a non-commercial licence
 - A vulnerable NuGet package, direct or transitive, fails the API build
   - Deprecated packages are reported without failing it: a deprecation is a migration to plan, not a defect
-  - The site's npm packages get the same check in its own CI (task 4.6)
+  - The site's production npm packages get the same check in `ci.yml`
+- The site deploys only after `ci.yml` passes: `deploy.yml` calls it
+  - why: a commit that doesn't build once reached review (2026-10-21)
+- `api/knowledge` matches what `npm run build:knowledge` writes from the page, checked in `ci.yml`
+  - why: the assistant would otherwise answer from an older page
 - Never pipe large output into an early-exit reader such as `grep -q` or `head`
   - why: `pipefail` turns the early exit into a false failure

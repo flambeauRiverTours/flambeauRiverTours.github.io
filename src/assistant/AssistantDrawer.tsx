@@ -151,7 +151,7 @@ function Waiting() {
 
     //a div, not a p: the spinner is itself a div
     return <div className="answer waiting">
-        <Spinner animation="border" size = "sm" role = "status" aria - hidden="true" /> { slow? "Still thinking…" : "Thinking…"}
+        <Spinner animation="border" size="sm" role="status" aria-hidden="true" /> {slow ? "Still thinking…" : "Thinking…"}
     </div>;
 }
 

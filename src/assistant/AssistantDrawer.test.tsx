@@ -114,14 +114,14 @@ describe("AssistantDrawer", () => {
         error.mockRestore();
     });
 
-    it("says the assistant may be waking up after 8 seconds", () => {
+    it("says it is still thinking after 8 seconds", () => {
         vi.useFakeTimers();
         render(<Page ask={pending().ask} />);
 
         fireEvent.click(screen.getByRole("button", { name: starter }));
         act(() => vi.advanceTimersByTime(8_000));
 
-        expect(screen.getByText("Still thinking, the assistant may be waking up.")).toBeTruthy();
+        expect(screen.getByText("Still thinking…")).toBeTruthy();
     });
 
     it("tells a rate-limited visitor when to come back, and offers email instead", async () => {

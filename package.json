@@ -12,7 +12,8 @@
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
     "test": "vitest run",
-    "build:knowledge": "node scripts/build-knowledge.mjs"
+    "build:knowledge": "node scripts/build-knowledge.mjs",
+    "check:licences": "node scripts/check-licences.mjs"
   },
   "dependencies": {
     "bootstrap": "^5.3.3",
