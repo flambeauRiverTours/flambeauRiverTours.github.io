@@ -26,7 +26,8 @@ dist-ssr
 # .NET build output for the assistant API
 api/**/bin/
 api/**/obj/
-api/.vs/
+# Visual Studio's local state, wherever it opens the repo from
+.vs/
 api/evals/results/self-test.md
 api/evals/results/judge-check.md
 # local Function settings hold the real Foundry address; the example is committed
