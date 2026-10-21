@@ -1,4 +1,6 @@
-﻿namespace Portfolio.Assistant.Evals
+﻿using Portfolio.Assistant.Core;
+
+namespace Portfolio.Assistant.Evals
 {
     /// <summary>One run of one case.</summary>
     /// <param name="Raw">The model's output, or the error when the call failed.</param>
@@ -11,5 +13,8 @@
 
         /// <summary>Of <see cref="InputTokens"/>, those written to the cache.</summary>
         public int CacheWriteTokens { get; init; }
+
+        /// <summary>The grounding judge's verdict; null when no judge ran or there was no answer to judge.</summary>
+        public GroundingVerdict? Grounding { get; init; }
     }
 }

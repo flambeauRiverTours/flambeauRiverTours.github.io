@@ -86,7 +86,13 @@ describe("buildKnowledge", () => {
     });
 
     it("tags entries that have an id, with subtitle, body and external links", () => {
-        expect(build().siteMd).toContain("## [experience-acme] Senior Engineer\nAcme · 2020 – Present\n- Shipped it\nLinks: Code (https://example.com/code)");
+        expect(build().siteMd).toContain("## [experience-acme] Senior Engineer\nAcme · 2020 – Present\n- Shipped it\nExternal pages: Code (https://example.com/code)");
+    });
+
+    //"Links:" is the answer's own final line, which may hold only link IDs; a line of labels and URLs in the knowledge
+    //would teach the opposite, and LinkExtractor cuts an answer at any line that starts with it
+    it("never starts a line with the answer format's Links: keyword", () => {
+        expect(build().siteMd).not.toMatch(/^Links:/m);
     });
 
     it("leaves entries without an id untagged", () => {

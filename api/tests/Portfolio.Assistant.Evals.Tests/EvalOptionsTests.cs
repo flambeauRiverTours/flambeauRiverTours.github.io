@@ -58,6 +58,42 @@ namespace Portfolio.Assistant.Evals.Tests
         [Fact]
         public void The_usage_text_lists_every_option() =>
             EvalOptions.Usage.Should().Contain("--self-test").And.Contain("--deployment").And.Contain("--runs").And.Contain("--parallel")
-                .And.Contain("--category").And.Contain("--id");
+                .And.Contain("--category").And.Contain("--id").And.Contain("--set").And.Contain("--judge");
+
+        [Fact]
+        public void By_default_the_tuned_set_runs_with_no_judge()
+        {
+            var options = EvalOptions.Parse([]);
+
+            options.Set.Should().Be(EvalSet.Tuned);
+            options.JudgeDeployment.Should().BeNull();
+        }
+
+        // the held-out set is never tuned on; the judge checks every claim against the knowledge
+        [Fact]
+        public void The_held_out_set_and_a_grounding_judge_can_be_chosen()
+        {
+            var options = EvalOptions.Parse(["--set", "heldout", "--judge", "claude-sonnet-5-5"]);
+
+            options.Set.Should().Be(EvalSet.HeldOut);
+            options.JudgeDeployment.Should().Be("claude-sonnet-5-5");
+        }
+
+        // checks the judge alone against hand-labelled answers, without asking the model anything
+        [Fact]
+        public void The_judge_check_can_be_chosen() =>
+            EvalOptions.Parse(["--judge-check", "--judge", "claude-sonnet-5-5"]).JudgeCheck.Should().BeTrue();
+
+        [Theory]
+        [InlineData("Unknown set: tuning (tuned or heldout)", "--set", "tuning")]
+        [InlineData("--judge needs a value", "--judge")]
+        public void A_wrong_set_or_judge_throws(string message, params string[] args) =>
+            FluentActions.Invoking(() => EvalOptions.Parse(args)).Should().Throw<UsageException>().WithMessage(message);
+
+        [Theory]
+        [InlineData("tuned", "questions.jsonl")]
+        [InlineData("heldout", "heldout.jsonl")]
+        public void Each_set_has_its_own_file(string set, string fileName) =>
+            EvalOptions.FileFor(EvalOptions.Parse(["--set", set]).Set).Should().Be(fileName);
     }
 }

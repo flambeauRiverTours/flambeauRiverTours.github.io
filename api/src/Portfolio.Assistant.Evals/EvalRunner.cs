@@ -7,7 +7,8 @@ namespace Portfolio.Assistant.Evals
     /// <summary>Asks each case several times and grades every answer.</summary>
     /// <param name="progress">Gets a line every <see cref="ProgressInterval"/> finished calls and at the end; nothing by default.</param>
     /// <param name="callTimeout">How long one call may take, the SDK's retries included, before its run fails; <see cref="DefaultCallTimeout"/> by default.</param>
-    internal sealed class EvalRunner(IAnswerModel model, KnowledgeBase knowledge, Grader grader, TextWriter? progress = null, TimeSpan? callTimeout = null)
+    /// <param name="judge">Checks each answer's claims against the knowledge; an unsupported claim fails the run. None by default.</param>
+    internal sealed class EvalRunner(IAnswerModel model, KnowledgeBase knowledge, Grader grader, TextWriter? progress = null, TimeSpan? callTimeout = null, IGroundingJudge? judge = null)
     {
         /// <summary>How many finished calls there are between progress lines.</summary>
         public const int ProgressInterval = 50;
@@ -67,11 +68,38 @@ namespace Portfolio.Assistant.Evals
             }
 
             // graded outside the try, so a grader bug stops the eval instead of looking like a model error
-            return new RunResult(answer.Text, grader.Grade(evalCase, answer.Text), answer.InputTokens, answer.OutputTokens, answer.Filtered)
+            var grade = grader.Grade(evalCase, answer.Text);
+            var grounding = answer.Filtered ? null : await JudgeAsync(evalCase, answer.Text, cancellationToken);
+            var unsupported = (grounding?.Unsupported ?? []).Select(claim => $"unsupported claim: {claim}");
+            return new RunResult(answer.Text, grade with { Failures = [.. grade.Failures, .. unsupported] }, answer.InputTokens, answer.OutputTokens, answer.Filtered)
             {
                 CacheReadTokens = answer.CacheReadTokens,
                 CacheWriteTokens = answer.CacheWriteTokens,
+                Grounding = grounding,
             };
+        }
+
+        // the judge sees the answer as the visitor would, without its Links line; a judge that is throttled or times out
+        // says nothing about the answer, so the run is left unjudged rather than failed
+        private async Task<GroundingVerdict?> JudgeAsync(EvalCase evalCase, string raw, CancellationToken cancellationToken)
+        {
+            if (judge is null)
+            {
+                return null;
+            }
+
+            var shown = LinkExtractor.Extract(raw, knowledge.Links).Text;
+            using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            deadline.CancelAfter(timeout);
+            try
+            {
+                return await judge.JudgeAsync(evalCase.Question, shown, deadline.Token).WaitAsync(deadline.Token);
+            }
+            catch (Exception error) when (IsTransient(error) || (error is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+            {
+                var detail = error is HttpRequestException { StatusCode: { } status } ? ((int)status).ToString(CultureInfo.InvariantCulture) : error.GetType().Name;
+                return new GroundingVerdict(Unsupported: null, 0, 0) { NoVerdictReason = $"the judge's call failed ({detail})" };
+            }
         }
 
         private static RunResult Failed(string message) => new(message, new RunGrade([$"model error: {message}"], LinkScore.None), 0, 0);

@@ -21,6 +21,9 @@ param foundryDeployment string = 'claude-haiku-5-5'
 @secure()
 param alertEmail string
 
+@description('Entra object ID of the person who reviews the question logs and honours deletion requests. Shared keys are off, so reading blobs needs a data role.')
+param logOwnerPrincipalId string
+
 @description('Origins the browser may call the API from.')
 param allowedOrigins string[] = [
   'https://jacktreadwell.com'
@@ -241,6 +244,19 @@ resource storageBlobDataOwner 'Microsoft.Authorization/roleAssignments@2022-04-0
   properties: {
     principalId: functionApp.identity.principalId
     principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataOwnerRoleId)
+  }
+}
+
+// lets the owner read the logs and rewrite a day to delete a visitor's lines (api/README.md), in this container only.
+// Data Owner rather than Contributor: the deploy identity may only assign Data Owner and Foundry User, and without a
+// hierarchical namespace the two differ only in managing ACLs, which this account doesn't have
+resource logOwner 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(storage::blob::assistantLogs.id, logOwnerPrincipalId, storageBlobDataOwnerRoleId)
+  scope: storage::blob::assistantLogs
+  properties: {
+    principalId: logOwnerPrincipalId
+    principalType: 'User'
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', storageBlobDataOwnerRoleId)
   }
 }

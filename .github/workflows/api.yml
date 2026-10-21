@@ -104,9 +104,10 @@ jobs:
           tar -xzf "$file" actionlint
           ./actionlint -color
 
-  # infrastructure changes are reviewed as a diff before they merge
+  # infrastructure changes are reviewed as a diff before they merge. Dependabot's runs can't read Actions secrets,
+  # so its pull requests skip this; a dependency bump doesn't change the Bicep
   preview:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -121,11 +122,12 @@ jobs:
           RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP_NAME }}
           FOUNDRY_ACCOUNT: ${{ vars.FOUNDRY_ACCOUNT_NAME }}
           ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
+          LOG_OWNER: ${{ vars.LOG_OWNER_PRINCIPAL_ID }}
         run: |
           az deployment group what-if \
             --resource-group "$RESOURCE_GROUP" \
             --template-file infra/main.bicep \
-            --parameters foundryAccountName="$FOUNDRY_ACCOUNT" alertEmail="$ALERT_EMAIL"
+            --parameters foundryAccountName="$FOUNDRY_ACCOUNT" alertEmail="$ALERT_EMAIL" logOwnerPrincipalId="$LOG_OWNER"
 
   infra:
     if: github.event_name != 'pull_request'
@@ -147,12 +149,13 @@ jobs:
           RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP_NAME }}
           FOUNDRY_ACCOUNT: ${{ vars.FOUNDRY_ACCOUNT_NAME }}
           ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
+          LOG_OWNER: ${{ vars.LOG_OWNER_PRINCIPAL_ID }}
         run: |
           az deployment group create \
             --name "api-${{ github.run_number }}" \
             --resource-group "$RESOURCE_GROUP" \
             --template-file infra/main.bicep \
-            --parameters foundryAccountName="$FOUNDRY_ACCOUNT" alertEmail="$ALERT_EMAIL" \
+            --parameters foundryAccountName="$FOUNDRY_ACCOUNT" alertEmail="$ALERT_EMAIL" logOwnerPrincipalId="$LOG_OWNER" \
             -o json > out.json
           for key in functionAppName functionAppUrl; do
             echo "$key=$(jq -r ".properties.outputs.$key.value" out.json)" >> "$GITHUB_OUTPUT"

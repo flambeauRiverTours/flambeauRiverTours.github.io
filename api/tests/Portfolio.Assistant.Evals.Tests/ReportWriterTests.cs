@@ -1,4 +1,5 @@
 ﻿using FluentAssertions;
+using Portfolio.Assistant.Core;
 
 namespace Portfolio.Assistant.Evals.Tests
 {
@@ -74,6 +75,43 @@ namespace Portfolio.Assistant.Evals.Tests
 
             Report(Cached("a"), Cached("b")).Should().Contain("2,000,000 input (1,600,000 read from the cache, 200,000 written to it)").And.Contain("$0.16");
         }
+
+        [Fact]
+        public void A_held_out_report_says_so_in_its_file_name_and_header()
+        {
+            var heldOut = Context with { Set = EvalSet.HeldOut };
+
+            ReportWriter.FileName(heldOut).Should().Be("2026-10-20-claude-haiku-5-5-abc123def456-heldout.md");
+            ReportWriter.Write([], LaunchBar.Evaluate([]), heldOut).Should().Contain("held-out set");
+        }
+
+        // the judge is a dearer model: its tokens are reported and priced apart from the answers'
+        [Fact]
+        public void Grounding_results_and_the_judges_cost_are_reported()
+        {
+            static RunResult Judged(IReadOnlyList<string>? unsupported, params string[] failures) =>
+                new RunResult("SPIE.", new RunGrade(failures, LinkScore.None), 0, 0)
+                {
+                    Grounding = new GroundingVerdict(unsupported, 1_000_000, 100_000)
+                    {
+                        CacheReadTokens = 800_000,
+                        CacheWriteTokens = 100_000,
+                        NoVerdictReason = unsupported is null ? "the judge refused" : null,
+                    },
+                };
+            var result = new CaseResult(new EvalCase("a", Category.Fact, "Q?", Expectation.Answer),
+                [Judged([]), Judged(["led a team of 12"], "unsupported claim: led a team of 12"), Judged(null)]);
+
+            var report = ReportWriter.Write([result], LaunchBar.Evaluate([result]), Context with { JudgeDeployment = "claude-sonnet-5-5" });
+
+            report.Should().Contain("## Grounding").And.Contain("claude-sonnet-5-5")
+                .And.Contain("Runs with unsupported claims: 1 of 2 judged").And.Contain("Not judged: 1 (the judge refused: 1)")
+                .And.Contain("$4.83");
+        }
+
+        [Fact]
+        public void Without_a_judge_there_is_no_grounding_section() =>
+            Report(Result("a", Category.Fact, "SPIE.")).Should().NotContain("## Grounding");
 
         [Fact]
         public void The_link_score_is_reported() =>

@@ -56,12 +56,12 @@ Below are some of the projects I work on in my free time, listed in reverse chro
 ## [projects-fantasy-football] Real-Time Fantasy Football Scoreboard
 Aug – Oct 2026 · .NET 10, React, Azure
 A live leaderboard and analytics site for my fantasy football league. It pairs a React frontend with a .NET 10 backend on Azure Functions and Static Web Apps, uses Blob and SQL storage, and deploys through GitHub Actions. It keeps scores current while running for about $0.25 a month. The write-up covers the architecture, the constraints I designed around, and the problems I solved along the way.
-Links: Live site (https://ff.jacktreadwell.com), Write-up (https://jacktreadwell.com/FantasyFootballWebsite/), Code (https://github.com/flambeauRiverTours/FantasyFootballWebsite)
+External pages: Live site (https://ff.jacktreadwell.com), Write-up (https://jacktreadwell.com/FantasyFootballWebsite/), Code (https://github.com/flambeauRiverTours/FantasyFootballWebsite)
 
 ## [projects-tidbyt] Tidbyt Berlin Transit App
 2024 · Open source · Starlark, REST APIs
 I've had a Tidbyt for a number of years, and as a user of public transit in Berlin, I wanted to see upcoming departures on it. So I built an app that pulls train timing and departure data from the VBB transit authority and displays it in a user-friendly way. It was a great opportunity to contribute to an open-source project, and good practice working with RESTful APIs.
-Links: Merged pull request (https://github.com/tidbyt/community/pull/2518)
+External pages: Merged pull request (https://github.com/tidbyt/community/pull/2518)
 
 # [reading] Reading List
 This is my little journal of books I've read recently that I found particularly interesting, motivating, or just entertaining. They're listed in reverse chronological order, and I try to add a book every few weeks. I generally read on my Kindle Paperwhite and borrow e-books from my local library.

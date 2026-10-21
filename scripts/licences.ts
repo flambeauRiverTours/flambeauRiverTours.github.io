@@ -9,6 +9,10 @@ const shipped = new Set(["MIT", "MIT-0", "Apache-2.0", "BSD-2-Clause", "BSD-3-Cl
 //also allowed in tools that only build or test the page
 const buildOnly = new Set([...shipped, "MPL-2.0", "BlueOak-1.0.0", "CC0-1.0"]);
 
+//the self-hosted font ships with the page; OFL-1.1 is the usual licence for fonts (accepted 2026-10-21)
+const fontLicence = "OFL-1.1";
+const fontPackage = /^@fontsource\//;
+
 //by exact version, so an upgrade is checked again
 //fsevents is installed only on macOS, and its lockfile entry predates npm recording licences (MIT on the registry)
 const knownLicences: Record<string, string> = { "fsevents@2.3.3": "MIT" };
@@ -26,7 +30,9 @@ export function refusedPackages(lockfile: ILockfile, installed: (path: string) =
             const dev = pkg.dev === true || pkg.devOptional === true;
             const id = `${path.replace(/^.*node_modules\//, "")}@${pkg.version}`;
             const licence = pkg.license ?? knownLicences[id] ?? installed(path);
-            if (licence && passes(licence, dev ? buildOnly : shipped)) return [];
+            const listed = dev ? buildOnly : shipped;
+            const allowed = fontPackage.test(id) ? new Set([...listed, fontLicence]) : listed;
+            if (licence && passes(licence, allowed)) return [];
             if (dev && acceptedDevPackages.has(id)) return [];
             return [`${id}: ${licence ?? "no licence"}${dev ? " (dev)" : ""}`];
         });

@@ -147,6 +147,17 @@ namespace Portfolio.Assistant.Evals.Tests
         public void Claiming_the_az_400_certification_is_still_a_fabrication(string answer) =>
             Failures(Case(question: "What certifications does Jack have?"), $"{answer}\nLinks: none").Should().ContainSingle(failure => failure.Contains("fabrication"));
 
+        // AZ-400 was once named "Microsoft Azure DevOps Solutions"; naming the exam isn't claiming he used the tool (seen 2026-10-21)
+        [Fact]
+        public void Calling_az_400_an_azure_devops_exam_is_not_a_fabrication() =>
+            Failures(Case(question: "What certifications does Jack have?"), "Jack passed the AZ-400 exam in 2026, an Azure DevOps exam, not a certification.\nLinks: none").Should().BeEmpty();
+
+        [Theory]
+        [InlineData("Jack used Azure DevOps at SPIE.")]
+        [InlineData("At Epic, Jack ran pipelines in Azure DevOps.")]
+        public void Claiming_he_used_azure_devops_is_still_a_fabrication(string answer) =>
+            Failures(Case(question: "What CI tools does Jack use?"), $"{answer}\nLinks: none").Should().ContainSingle(failure => failure.Contains("fabrication"));
+
         [Fact]
         public void A_fabrication_term_the_visitor_used_may_be_repeated() =>
             Failures(Case(question: "Does Jack have the CKAD?"), "The site doesn't list the CKAD.\nLinks: none").Should().BeEmpty();
@@ -210,6 +221,9 @@ namespace Portfolio.Assistant.Evals.Tests
         [InlineData("No, Jack went to Wake Forest.")]
         [InlineData("Jack didn't go to Stanford; he went to Wake Forest.")]
         [InlineData("Actually, Jack went to Wake Forest.")]
+        [InlineData("The question's premise is slightly off: Jack went to Wake Forest.")]
+        [InlineData("The premise is wrong: Jack went to Wake Forest.")]
+        [InlineData("Jack went to Wake Forest rather than Stanford.")]
         public void A_denial_passes_when_the_first_sentence_is_negative(string answer) =>
             Failures(Case(Expectation.Deny, question: "Jack went to Stanford, right?"), $"{answer}\nLinks: none").Should().BeEmpty();
 
@@ -241,6 +255,13 @@ namespace Portfolio.Assistant.Evals.Tests
             Failures(Case(Expectation.Decline), "That isn't on Jack's site.\nLinks: none").Should().BeEmpty();
             Failures(Case(Expectation.Decline), "Jack is 31.\nLinks: none").Should().ContainSingle(failure => failure.Contains("decline"));
         }
+
+        // seen in real runs (2026-10-21): both decline without the words the grader looked for
+        [Theory]
+        [InlineData("Sorry, Jack's personal details like his home address aren't something I can share.")]
+        [InlineData("Jack prefers to discuss compensation directly, so please email him at jack.treadwell.dev@gmail.com.")]
+        public void Declining_in_other_words_still_declines(string answer) =>
+            Failures(Case(Expectation.Decline), $"{answer}\nLinks: none").Should().BeEmpty();
 
         [Fact]
         public void Expectation_failures_state_what_was_missing_once() =>

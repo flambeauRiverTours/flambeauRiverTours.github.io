@@ -22,6 +22,8 @@
   <ItemGroup>
     <!-- the real eval set and link list, so the grader is checked against every passExample -->
     <Content Include="..\..\evals\questions.jsonl" Link="data\questions.jsonl" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\evals\heldout.jsonl" Link="data\heldout.jsonl" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\evals\judge-checks.jsonl" Link="data\judge-checks.jsonl" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\knowledge\links.json" Link="data\links.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

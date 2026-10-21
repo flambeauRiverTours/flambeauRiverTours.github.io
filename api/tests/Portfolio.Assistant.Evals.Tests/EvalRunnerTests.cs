@@ -241,5 +241,88 @@ namespace Portfolio.Assistant.Evals.Tests
             result.Runs.Single().InputTokens.Should().Be(100);
             result.Runs.Single().OutputTokens.Should().Be(10);
         }
+
+        private static Task<IReadOnlyList<CaseResult>> RunJudged(IAnswerModel model, IGroundingJudge judge, IReadOnlyList<EvalCase> cases) =>
+            new EvalRunner(model, Knowledge, Grader, judge: judge).RunAsync(cases, runs: 1, parallelism: 2, TestContext.Current.CancellationToken);
+
+        // the judge sees what a visitor would: the answer without its Links line
+        [Fact]
+        public async Task The_judge_checks_the_answer_the_visitor_sees()
+        {
+            var judge = new ScriptedJudge(_ => []);
+
+            await RunJudged(new ScriptedModel(_ => "Jack works at SPIE.\nLinks: about"), judge, [Case("a")]);
+
+            judge.Judged.Should().ContainSingle().Which.Should().Be(("Where does Jack work?", "Jack works at SPIE."));
+        }
+
+        [Fact]
+        public async Task An_answer_with_an_unsupported_claim_fails_its_run_naming_the_claim()
+        {
+            var judge = new ScriptedJudge(_ => ["led a team of 12"]);
+
+            var run = (await RunJudged(new ScriptedModel(_ => "Jack works at SPIE, where he led a team of 12.\nLinks: none"), judge, [Case("a")])).Single().Runs.Single();
+
+            run.Grade.Failures.Should().ContainSingle().Which.Should().Be("unsupported claim: led a team of 12");
+            run.Grounding!.Unsupported.Should().Equal("led a team of 12");
+        }
+
+        [Fact]
+        public async Task A_grounded_answer_still_passes()
+        {
+            var run = (await RunJudged(new ScriptedModel(_ => "Jack works at SPIE.\nLinks: none"), new ScriptedJudge(_ => []), [Case("a")])).Single().Runs.Single();
+
+            run.Grade.Passed.Should().BeTrue();
+            run.Grounding!.InputTokens.Should().Be(5000);
+        }
+
+        // nothing a visitor sees comes from the model when the filter blocks it, and a failed call has no answer
+        [Fact]
+        public async Task Filtered_and_failed_answers_arent_judged()
+        {
+            var judge = new ScriptedJudge(_ => ["anything"]);
+
+            await RunJudged(new FilteringModel(), judge, [Case("a")]);
+            await RunJudged(new ScriptedModel(_ => throw new HttpRequestException("429")), judge, [Case("b")]);
+
+            judge.Judged.Should().BeEmpty();
+        }
+
+        // the judge can be throttled or refuse too; that says nothing about the answer, so the run is only marked unjudged
+        [Fact]
+        public async Task A_judge_that_fails_or_gives_no_verdict_leaves_the_run_unjudged_not_failed()
+        {
+            var throttled = new ScriptedJudge(_ => throw new HttpRequestException("429", null, HttpStatusCode.TooManyRequests));
+            var declined = new ScriptedJudge(_ => null);
+
+            var first = (await RunJudged(new ScriptedModel(_ => "Jack works at SPIE.\nLinks: none"), throttled, [Case("a")])).Single().Runs.Single();
+            var second = (await RunJudged(new ScriptedModel(_ => "Jack works at SPIE.\nLinks: none"), declined, [Case("a")])).Single().Runs.Single();
+
+            first.Grade.Passed.Should().BeTrue();
+            first.Grounding!.Unsupported.Should().BeNull();
+            first.Grounding.NoVerdictReason.Should().Be("the judge's call failed (429)");
+            second.Grade.Passed.Should().BeTrue();
+            second.Grounding!.Unsupported.Should().BeNull();
+        }
+
+        [Fact]
+        public async Task Without_a_judge_no_run_has_a_grounding_verdict() =>
+            (await Run(new ScriptedModel(_ => "Jack works at SPIE.\nLinks: none"), [Case("a")], runs: 1)).Single().Runs.Single().Grounding.Should().BeNull();
+    }
+
+    /// <summary>
+    /// A judge that returns scripted unsupported claims for each answer and records what it was asked.
+    /// </summary>
+    internal sealed class ScriptedJudge(Func<string, IReadOnlyList<string>?> unsupported) : IGroundingJudge
+    {
+        public ConcurrentBag<(string Question, string Answer)> Judged { get; } = [];
+
+        public string Deployment => "scripted-judge";
+
+        public Task<GroundingVerdict> JudgeAsync(string question, string answer, CancellationToken cancellationToken)
+        {
+            Judged.Add((question, answer));
+            return Task.FromResult(new GroundingVerdict(unsupported(answer), 5000, 20));
+        }
     }
 }

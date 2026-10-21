@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import heldOutText from "../api/evals/heldout.jsonl?raw";
 import questionsText from "../api/evals/questions.jsonl?raw";
 import linksText from "../api/knowledge/links.json?raw";
 import siteText from "../api/knowledge/site.md?raw";
@@ -22,11 +23,26 @@ interface IEvalCase {
     passExample?: string; //a good answer; the C# EvalSetTests run it through the real grader
 }
 
-const lines = questionsText.split("\n").filter((line) => line.trim());
-const cases: IEvalCase[] = lines.map((line) => JSON.parse(line));
+const parse = (text: string): IEvalCase[] => text.split("\n").filter((line) => line.trim()).map((line) => JSON.parse(line));
+const tunedCases = parse(questionsText);
+const heldOutCases = parse(heldOutText);
 const linkIds = (JSON.parse(linksText) as { id: string }[]).map((link) => link.id);
 
-describe("api/evals/questions.jsonl", () => {
+//the held-out set is measured, never tuned on: it must stay apart from the tuned set
+describe("api/evals/heldout.jsonl", () => {
+    it("shares no ids or questions with the tuned set", () => {
+        const tunedIds = new Set(tunedCases.map((evalCase) => evalCase.id));
+        const tunedQuestions = new Set(tunedCases.map((evalCase) => evalCase.question.toLowerCase()));
+        expect(heldOutCases.filter((evalCase) => tunedIds.has(evalCase.id) || tunedQuestions.has(evalCase.question.toLowerCase())).map((evalCase) => evalCase.id)).toEqual([]);
+    });
+
+    it("weights the high-risk categories", () => {
+        const count = (category: string) => heldOutCases.filter((evalCase) => evalCase.category === category).length;
+        expect(count("trap") + count("jailbreak")).toBeGreaterThanOrEqual(20);
+    });
+});
+
+describe.each([["api/evals/questions.jsonl", tunedCases], ["api/evals/heldout.jsonl", heldOutCases]])("%s", (_, cases) => {
     it("has unique kebab-case ids", () => {
         const ids = cases.map((evalCase) => evalCase.id);
         expect(ids.filter((id) => !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(id))).toEqual([]);
@@ -77,16 +93,6 @@ describe("api/evals/questions.jsonl", () => {
         expect(unchecked).toEqual([]);
     });
 
-    it("covers every category, with extra weight on the high-risk ones", () => {
-        const count = (category: string) => cases.filter((evalCase) => evalCase.category === category).length;
-        expect(categories.filter((category) => count(category) < 3)).toEqual([]);
-        expect(count("trap")).toBeGreaterThanOrEqual(15);
-        expect(count("jailbreak")).toBeGreaterThanOrEqual(10);
-        expect(count("privacy")).toBeGreaterThanOrEqual(6);
-        expect(count("sensitive")).toBeGreaterThanOrEqual(15);
-        expect(cases.filter((evalCase) => evalCase.id.startsWith("inj-")).length).toBeGreaterThanOrEqual(8);
-    });
-
     it("has a passExample for every case whose mustNotMatch could catch a correct denial", () => {
         const risky = cases.filter((evalCase) => ["jailbreak", "sensitive", "trap", "privacy"].includes(evalCase.category) && evalCase.mustNotMatch?.length);
         expect(risky.filter((evalCase) => !evalCase.passExample).map((evalCase) => evalCase.id)).toEqual([]);
@@ -99,6 +105,21 @@ describe("api/evals/questions.jsonl", () => {
             .filter((evalCase) => factCategories.includes(evalCase.category) && ["answer", "deny"].includes(evalCase.expect))
             .flatMap((evalCase) => (evalCase.mustMatch ?? []).filter((pattern) => !new RegExp(pattern, "i").test(knowledge)).map((pattern) => `${evalCase.id}: ${pattern}`));
         expect(missing).toEqual([]);
+    });
+});
+
+//coverage is the tuned set's job; the held-out set is a sample
+describe("api/evals/questions.jsonl coverage", () => {
+    const cases = tunedCases;
+
+    it("covers every category, with extra weight on the high-risk ones", () => {
+        const count = (category: string) => cases.filter((evalCase) => evalCase.category === category).length;
+        expect(categories.filter((category) => count(category) < 3)).toEqual([]);
+        expect(count("trap")).toBeGreaterThanOrEqual(15);
+        expect(count("jailbreak")).toBeGreaterThanOrEqual(10);
+        expect(count("privacy")).toBeGreaterThanOrEqual(6);
+        expect(count("sensitive")).toBeGreaterThanOrEqual(15);
+        expect(cases.filter((evalCase) => evalCase.id.startsWith("inj-")).length).toBeGreaterThanOrEqual(8);
     });
 
     it("has at least one case for every page anchor", () => {

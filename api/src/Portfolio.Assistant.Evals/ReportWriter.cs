@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using Portfolio.Assistant.Core;
 
 namespace Portfolio.Assistant.Evals
 {
@@ -13,6 +14,10 @@ namespace Portfolio.Assistant.Evals
         private const decimal CacheReadPriceFactor = 0.1m;
         private const decimal CacheWritePriceFactor = 1.25m;
 
+        // Claude Sonnet 5.5, the grounding judge
+        private const decimal JudgeDollarsPerMillionInput = 2.00m;
+        private const decimal JudgeDollarsPerMillionOutput = 10.00m;
+
         private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
 
         // the same rule on every OS, unlike Path.GetInvalidFileNameChars
@@ -23,7 +28,8 @@ namespace Portfolio.Assistant.Evals
         {
             var date = context.Date.ToString("yyyy-MM-dd", Invariant);
             var deployment = UnsafeFileNameCharacters.Replace(context.Deployment, "-");
-            return $"{date}-{deployment}-{context.PromptVersion}.md";
+            var set = context.Set == EvalSet.HeldOut ? "-heldout" : "";
+            return $"{date}-{deployment}-{context.PromptVersion}{set}.md";
         }
 
         /// <summary>The file name, or the first of <c>name-2.md</c>, <c>name-3.md</c>… not yet taken, so a rerun never replaces a report.</summary>
@@ -48,6 +54,7 @@ namespace Portfolio.Assistant.Evals
             WriteHeader(report, results, bar, context);
             WriteCategories(report, results);
             WriteLinks(report, results);
+            WriteGrounding(report, results, context);
             WriteCost(report, results);
             WriteFailures(report, results);
             return report.ToString();
@@ -60,6 +67,7 @@ namespace Portfolio.Assistant.Evals
             report.AppendLine(Invariant, $"# Eval run: {context.Date.ToString("yyyy-MM-dd HH:mm", Invariant)} UTC, {context.Deployment}")
                 .AppendLine()
                 .AppendLine(Invariant, $"- Prompt version: `{context.PromptVersion}`")
+                .AppendLine(context.Set == EvalSet.HeldOut ? "- Cases: the held-out set (`heldout.jsonl`), never tuned on" : "- Cases: the tuned set (`questions.jsonl`)")
                 .AppendLine(Invariant, $"- {results.Count} cases × {context.Runs} runs; a case passes only if every run passes")
                 .AppendLine(Invariant, $"- **Launch bar: {verdict}**: overall {Percent(bar.Overall)} (needs {Percent(LaunchBar.OverallMinimum)}){strictRates} (each needs 100%)")
                 .AppendLine();
@@ -99,19 +107,57 @@ namespace Portfolio.Assistant.Evals
         private static void WriteCost(StringBuilder report, IReadOnlyList<CaseResult> results)
         {
             var runs = results.SelectMany(result => result.Runs).ToList();
-            long input = runs.Sum(run => run.InputTokens);
-            long cacheRead = runs.Sum(run => run.CacheReadTokens);
-            long cacheWrite = runs.Sum(run => run.CacheWriteTokens);
-            long output = runs.Sum(run => run.OutputTokens);
-            var inputPriced = input - cacheRead - cacheWrite + (cacheRead * CacheReadPriceFactor) + (cacheWrite * CacheWritePriceFactor);
-            var cost = (inputPriced * DollarsPerMillionInput + output * DollarsPerMillionOutput) / 1_000_000;
-            var prices = $"${DollarsPerMillionInput.ToString("0.00", Invariant)} / ${DollarsPerMillionOutput.ToString("0.00", Invariant)} per million tokens";
-            var cached = $"{cacheRead.ToString("N0", Invariant)} read from the cache, {cacheWrite.ToString("N0", Invariant)} written to it";
+            var tokens = new TokenTotals(
+                runs.Sum(run => (long)run.InputTokens), runs.Sum(run => (long)run.CacheReadTokens), runs.Sum(run => (long)run.CacheWriteTokens), runs.Sum(run => (long)run.OutputTokens));
 
-            report.AppendLine("## Tokens and cost").AppendLine()
-                .AppendLine(Invariant, $"- {input.ToString("N0", Invariant)} input ({cached}) + {output.ToString("N0", Invariant)} output tokens")
-                .AppendLine(Invariant, $"- About {cost.ToString("$0.00", Invariant)} at the assumed prices ({prices})")
-                .AppendLine();
+            report.AppendLine("## Tokens and cost").AppendLine();
+            WriteTokens(report, tokens, DollarsPerMillionInput, DollarsPerMillionOutput);
+            report.AppendLine();
+        }
+
+        // only for a judged run; the judge's tokens are priced at its own model's rates
+        private static void WriteGrounding(StringBuilder report, IReadOnlyList<CaseResult> results, ReportContext context)
+        {
+            if (context.JudgeDeployment is null)
+            {
+                return;
+            }
+
+            var verdicts = results.SelectMany(result => result.Runs).Select(run => run.Grounding).OfType<GroundingVerdict>().ToList();
+            var judged = verdicts.Count(verdict => verdict.Unsupported is not null);
+            var withClaims = verdicts.Count(verdict => verdict.Unsupported is { Count: > 0 });
+            var tokens = new TokenTotals(
+                verdicts.Sum(verdict => (long)verdict.InputTokens), verdicts.Sum(verdict => (long)verdict.CacheReadTokens),
+                verdicts.Sum(verdict => (long)verdict.CacheWriteTokens), verdicts.Sum(verdict => (long)verdict.OutputTokens));
+
+            report.AppendLine("## Grounding").AppendLine()
+                .AppendLine(Invariant, $"- Judged by `{context.JudgeDeployment}`: every claim in an answer checked against the knowledge")
+                .AppendLine(Invariant, $"- Runs with unsupported claims: {withClaims} of {judged} judged (each fails its run)")
+                .AppendLine(Invariant, $"- Not judged: {verdicts.Count - judged}{NoVerdictReasons(verdicts)}");
+            WriteTokens(report, tokens, JudgeDollarsPerMillionInput, JudgeDollarsPerMillionOutput);
+            report.AppendLine();
+        }
+
+        // e.g. " (the judge refused: 30, the judge's call failed (429): 8)", most common first
+        private static string NoVerdictReasons(IEnumerable<GroundingVerdict> verdicts)
+        {
+            var reasons = verdicts.Where(verdict => verdict.Unsupported is null)
+                .GroupBy(verdict => verdict.NoVerdictReason ?? "no reason given")
+                .OrderByDescending(group => group.Count()).ThenBy(group => group.Key, StringComparer.Ordinal)
+                .Select(group => string.Create(Invariant, $"{group.Key}: {group.Count()}"))
+                .ToList();
+            return reasons.Count == 0 ? "" : $" ({string.Join(", ", reasons)})";
+        }
+
+        private static void WriteTokens(StringBuilder report, TokenTotals tokens, decimal inputPrice, decimal outputPrice)
+        {
+            var inputPriced = tokens.Input - tokens.CacheRead - tokens.CacheWrite + (tokens.CacheRead * CacheReadPriceFactor) + (tokens.CacheWrite * CacheWritePriceFactor);
+            var cost = (inputPriced * inputPrice + tokens.Output * outputPrice) / 1_000_000;
+            var prices = $"${inputPrice.ToString("0.00", Invariant)} / ${outputPrice.ToString("0.00", Invariant)} per million tokens";
+            var cached = $"{tokens.CacheRead.ToString("N0", Invariant)} read from the cache, {tokens.CacheWrite.ToString("N0", Invariant)} written to it";
+
+            report.AppendLine(Invariant, $"- {tokens.Input.ToString("N0", Invariant)} input ({cached}) + {tokens.Output.ToString("N0", Invariant)} output tokens")
+                .AppendLine(Invariant, $"- About {cost.ToString("$0.00", Invariant)} at the assumed prices ({prices})");
         }
 
         private static void WriteFailures(StringBuilder report, IReadOnlyList<CaseResult> results)
@@ -149,5 +195,8 @@ namespace Portfolio.Assistant.Evals
         private static string Quote(string text) => string.Join("\n", text.Replace("\r\n", "\n").Split('\n').Select(line => $"> {line}"));
 
         private static string Percent(double rate) => rate.ToString("0%", Invariant);
+
+        /// <summary>Tokens summed over runs; <see cref="Input"/> includes the cached ones.</summary>
+        private sealed record TokenTotals(long Input, long CacheRead, long CacheWrite, long Output);
     }
 }

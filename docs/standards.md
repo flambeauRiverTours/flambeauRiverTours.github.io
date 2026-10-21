@@ -184,6 +184,9 @@ Adopted from the FantasyFootballWebsite repository's `docs/standards.md`, adapte
   - `npm run check:licences` checks every package in the lockfile, in CI
   - Exceptions are pinned to an exact version, so an upgrade is checked again (`scripts/licences.ts`)
   - **Exception:** `argparse` 2.0.1 (Python-2.0, permissive), a dev package through ESLint 8's `js-yaml` (accepted 2026-10-21)
+  - **Exception:** `@fontsource/*` packages may be OFL-1.1, the usual licence for fonts; nothing else may (2026-10-21)
+- The page makes no requests to third parties; fonts are bundled, not loaded from Google
+  - why: the privacy note promises no tracking, and a Google-hosted font sends every visitor's IP address to Google (checked by `scripts/privacy.test.ts`)
 - A vulnerable production package fails the site's build (`npm audit --omit=dev`)
   - Dev advisories don't fail it: they never ship, and Dependabot raises them
 
@@ -217,6 +220,10 @@ Adopted from the FantasyFootballWebsite repository's `docs/standards.md`, adapte
   - why: a hobby site should never produce a real bill; the model itself is about fifty cents more
   - Storage and hosting are a few cents; the two alerts are about 60 cents (accepted 2026-10-21)
 - A budget covers the resource group, alerting at $3 and $5 spent and a forecast over $5 (`budget.bicep`)
+- Evals are the biggest cost, so the dear ones run on demand (agreed 2026-10-21)
+  - why: October's eval runs alone reached the $5 budget; the grounding judge (Sonnet 5.5) is about $0.003 a call
+  - Pull requests: the tuned set unjudged and the held-out set judged, about $0.60 together
+  - Both sets fully judged (about $3.50): only by hand, for launch and big prompt or model changes
 - New resources state their monthly cost up front, in a comment beside them
 - A daily telemetry cap stays inside the free grant
 

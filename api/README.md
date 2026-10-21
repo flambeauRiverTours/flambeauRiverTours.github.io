@@ -42,6 +42,30 @@ az storage blob download --connection-string UseDevelopmentStorage=true -c assis
 
 Locally the app signs in with your `az login`; in Azure it uses its managed identity, chosen by whether `IDENTITY_ENDPOINT` is set. Bad settings stop it starting, with the setting named in the log.
 
+## Reading production logs, and deleting a visitor's questions
+
+Shared keys are off, so reading the logs needs a data role. `main.bicep` gives one person Storage Blob Data Owner on the `assistant-logs` container, set by the `LOG_OWNER_PRINCIPAL_ID` repo variable (your Entra object ID: `az ad signed-in-user show --query id -o tsv`). Sign in with `az login` as that person, then find the account (the only storage account in the group once the old one is gone, task 4.5):
+
+```bash
+ACCOUNT=$(az storage account list -g rg-portfolio-ai-prod --query "[?name!='stportfolioaichat'].name | [0]" -o tsv)
+```
+
+Read a day (UTC):
+
+```bash
+az storage blob download --auth-mode login --account-name "$ACCOUNT" -c assistant-logs -n 2026/10/20.jsonl -f day.jsonl
+```
+
+To delete a visitor's questions (the privacy page promises this), find their lines from roughly when they asked and what, note each `requestId`, and replace the day's blob without them. An append blob can't drop lines in place. Do it only for a day that has ended, or the Function may append a line between your download and upload, and that line would be lost:
+
+```bash
+grep -n "words from their question" day.jsonl
+grep -v -F '"requestId":"<id>"' day.jsonl > kept.jsonl
+az storage blob upload --auth-mode login --account-name "$ACCOUNT" -c assistant-logs -n 2026/10/20.jsonl -f kept.jsonl --type append --overwrite
+```
+
+If no lines are left, delete the blob instead (`az storage blob delete`). Tested against Azurite on 2026-10-21, with `--connection-string UseDevelopmentStorage=true` in place of `--auth-mode login --account-name`: the line went, the others stayed, and the blob stayed an append blob.
+
 ## Rate limiting
 
 - **Visitors** are counted in memory on the app's one instance: 5 questions a minute and 30 a day each, with IPv6 counted per /64 network. Addresses never leave memory, and a restart forgetting them is harmless.

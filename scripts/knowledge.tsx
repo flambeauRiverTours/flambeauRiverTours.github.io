@@ -75,7 +75,8 @@ export function buildSiteKnowledge(): { siteMd: string; links: ILinkTarget[] } {
 }
 
 function sectionToText(section: ISectionData): string {
-    //personal sections keep only their introduction: the deployment breaks above 4,096 prompt tokens, and books and trips matter least to recruiters
+    //personal sections keep only their introduction: books and trips matter least to recruiters, and each one costs tokens on
+    //every question. (First chosen for Phi-4-mini's 4,096-token limit; Haiku has no such limit, so adding them is a product choice)
     if (section.group === SectionGroup.personal) {
         const introduction = section.bodyTextSections.filter((entry) => entry.style === BodyBlockStyle.titleBlock).map((entry) => entryToText(section, entry));
         return [...introduction, `The individual entries are in the ${section.buttonTitle} section of the page.`].join("\n");
@@ -101,5 +102,6 @@ function entryToText(section: ISectionData, entry: IBodyTextSection): string {
 }
 
 function linksToText(links: ILink[]): string {
-    return "Links: " + links.map((link) => `${link.label} (${link.href})`).join(", ");
+    //not "Links:", which is the answer's own final line and may hold only link IDs
+    return "External pages: " + links.map((link) => `${link.label} (${link.href})`).join(", ");
 }

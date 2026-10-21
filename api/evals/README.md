@@ -127,6 +127,12 @@ While it runs, the runner prints a progress line every 50 finished calls and at 
 
 Exit code: 0 when the launch bar is met, 1 when it isn't, 2 for bad options or setup. The eval workflow (task 4.7) relies on this.
 
+## Held-out set and grounding judge
+
+- `heldout.jsonl` holds 50 cases drafted blind (2026-10-21) from the knowledge files only, by a model that never saw `questions.jsonl` or past failures. Run it with `--set heldout`; reports end `-heldout.md`. Never tune the prompt on it: it's measured, not fixed.
+- `--judge <deployment>` (e.g. `claude-sonnet-5-5`) has a stronger model list every claim in each answer that `site.md` and `faq.md` don't support; any unsupported claim fails the run. Runs the judge couldn't check are counted as not judged, not failed.
+- `--self-test --judge <deployment>` judges the passExamples, which are correct answers, so anything flagged is a false positive: run it first to calibrate the judge (about 180 calls, about $0.55).
+
 ## Run time
 
 A full run is 335 cases × 3 runs ≈ 1,000 calls of about 5.4k input tokens each on Claude Haiku 5.5, so about 5.4M tokens (roughly $0.57). The deployment's 50k tokens-per-minute limit allows only about 10 calls a minute, so a full run takes about 90–100 minutes with a few hundred `429` responses, which the SDK waits out and retries. Keep the PC awake for the whole run. While tuning, use `--runs 1` with `--category` or `--id`.

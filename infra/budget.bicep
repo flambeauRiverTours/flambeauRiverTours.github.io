@@ -12,18 +12,24 @@ param alertEmail string
 @description('The budget\'s first day, yyyy-MM-dd. The first day of this month for a new budget; the existing date to change one.')
 param startDate string
 
-// covers the whole resource group: the model's tokens as well as the Function and its storage
+@description('Dollars a month. $5 normally; raised for a month of heavy eval runs (October 2026: $15), then set back.')
+@minValue(1)
+param amount int = 5
+
+// covers the whole resource group: the model's tokens as well as the Function and its storage. Claude bills through the
+// Marketplace, and Cost Management puts its "Claude in Microsoft Foundry (Azure hosted)" consumption units on a
+// microsoft.saas resource inside this group (checked 2026-10-21: $4.82 of October's eval runs showed here)
 resource budget 'Microsoft.Consumption/budgets@2024-08-01' = {
   name: 'budget-${namePrefix}'
   properties: {
     category: 'Cost'
-    amount: 5
+    amount: amount
     timeGrain: 'Monthly'
     timePeriod: {
       startDate: startDate
     }
     notifications: {
-      // thresholds are percentages of the amount: 60 of $5 is $3, a warning well above the expected ~$1
+      // thresholds are percentages of the amount: 60 of $5 is $3, a warning well above the expected ~$1 (the key keeps its first name)
       warningAtThreeDollars: {
         enabled: true
         operator: 'GreaterThan'

@@ -58,6 +58,12 @@ describe("refusedPackages", () => {
             .toEqual(["argparse@2.0.2: Python-2.0 (dev)"]);
     });
 
+    //the self-hosted font ships with the page; OFL-1.1 is the usual licence for fonts, and allowed for nothing else
+    it("allows the OFL for fontsource font packages only", () => {
+        expect(refusedPackages(lockfile({ "node_modules/@fontsource/inter": { version: "5.3.0", license: "OFL-1.1" } }))).toEqual([]);
+        expect(refusedPackages(lockfile({ "node_modules/some-lib": { version: "1.0.0", license: "OFL-1.1" } }))).toEqual(["some-lib@1.0.0: OFL-1.1"]);
+    });
+
     it("prefers the lockfile's licence to the installed one", () => {
         expect(refusedPackages(lockfile({ "node_modules/a": { version: "1.0.0", license: "GPL-3.0" } }), () => "MIT"))
             .toEqual(["a@1.0.0: GPL-3.0"]);
