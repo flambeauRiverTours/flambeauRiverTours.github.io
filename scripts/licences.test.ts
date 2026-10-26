@@ -50,12 +50,15 @@ describe("refusedPackages", () => {
         expect(refusedPackages(lockfile({ "node_modules/fsevents": { version: "2.3.4", dev: true } }))).toEqual(["fsevents@2.3.4: no licence (dev)"]);
     });
 
-    it("accepts argparse 2.0.1's Python-2.0 licence as a dev package only", () => {
-        expect(refusedPackages(lockfile({ "node_modules/argparse": { version: "2.0.1", license: "Python-2.0", dev: true } }))).toEqual([]);
-        expect(refusedPackages(lockfile({ "node_modules/argparse": { version: "2.0.1", license: "Python-2.0" } })))
-            .toEqual(["argparse@2.0.1: Python-2.0"]);
-        expect(refusedPackages(lockfile({ "node_modules/argparse": { version: "2.0.2", license: "Python-2.0", dev: true } })))
-            .toEqual(["argparse@2.0.2: Python-2.0 (dev)"]);
+    //caniuse-lite is browser-support data, republished almost weekly, so it's accepted by name rather than version
+    it("accepts caniuse-lite's CC-BY-4.0 licence in any version, as a dev package only", () => {
+        const caniuse = (version: string, dev: boolean) =>
+            lockfile({ "node_modules/caniuse-lite": { version, license: "CC-BY-4.0", dev } });
+        expect(refusedPackages(caniuse("1.0.30001819", true))).toEqual([]);
+        expect(refusedPackages(caniuse("1.0.30001900", true))).toEqual([]);
+        expect(refusedPackages(caniuse("1.0.30001819", false))).toEqual(["caniuse-lite@1.0.30001819: CC-BY-4.0"]);
+        expect(refusedPackages(lockfile({ "node_modules/other": { version: "1.0.0", license: "CC-BY-4.0", dev: true } })))
+            .toEqual(["other@1.0.0: CC-BY-4.0 (dev)"]);
     });
 
     //the self-hosted font ships with the page; OFL-1.1 is the usual licence for fonts, and allowed for nothing else

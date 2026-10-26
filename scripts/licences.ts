@@ -16,8 +16,9 @@ const fontPackage = /^@fontsource\//;
 //by exact version, so an upgrade is checked again
 //fsevents is installed only on macOS, and its lockfile entry predates npm recording licences (MIT on the registry)
 const knownLicences: Record<string, string> = { "fsevents@2.3.3": "MIT" };
-//Python-2.0 is permissive; argparse comes through ESLint 8's js-yaml, so it never ships (accepted 2026-10-21)
-const acceptedDevPackages = new Set(["argparse@2.0.1"]);
+//by name, dev only: caniuse-lite (CC-BY-4.0) is browser-support data that comes through eslint-plugin-react-hooks' Babel,
+//never ships, and is republished almost weekly, so pinning a version would fail most Dependabot updates
+const acceptedDevPackageNames = new Set(["caniuse-lite"]);
 
 /**
  * Each package outside the allow list, as "name@version: licence", with "(dev)" for build and test tools.
@@ -28,12 +29,13 @@ export function refusedPackages(lockfile: ILockfile, installed: (path: string) =
         .filter(([path]) => path !== "") //the site itself
         .flatMap(([path, pkg]) => {
             const dev = pkg.dev === true || pkg.devOptional === true;
-            const id = `${path.replace(/^.*node_modules\//, "")}@${pkg.version}`;
+            const name = path.replace(/^.*node_modules\//, "");
+            const id = `${name}@${pkg.version}`;
             const licence = pkg.license ?? knownLicences[id] ?? installed(path);
             const listed = dev ? buildOnly : shipped;
             const allowed = fontPackage.test(id) ? new Set([...listed, fontLicence]) : listed;
             if (licence && passes(licence, allowed)) return [];
-            if (dev && acceptedDevPackages.has(id)) return [];
+            if (dev && acceptedDevPackageNames.has(name)) return [];
             return [`${id}: ${licence ?? "no licence"}${dev ? " (dev)" : ""}`];
         });
 }
