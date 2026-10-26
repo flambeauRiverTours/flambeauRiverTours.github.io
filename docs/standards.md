@@ -72,6 +72,7 @@ Adopted from the FantasyFootballWebsite repository's `docs/standards.md`, adapte
 ## Logging
 
 - Question and answer text is logged only to the 90-day blob, never to App Insights
+  - The daily summary email carries none either, checked by a test; it says where to read the day instead
   - Only requests that reached the model are written to the blob; turned-away ones are App Insights requests with their status code
   - why: they carry no question, and a flood of them would fill the day's append blob (50,000 blocks)
 - IP addresses are never logged, hashed or not
@@ -214,6 +215,8 @@ Adopted from the FantasyFootballWebsite repository's `docs/standards.md`, adapte
 - Everything reaches Azure by managed identity; no keys or connection strings with secrets exist
   - Storage has shared keys turned off
   - Foundry's key auth is turned off before launch (task 4.4)
+  - Communication Services has `disableLocalAuth`, and the app sends email through a custom role with only `CommunicationServices/Read` and `/Write` (`email-sender-role.bicep`)
+    - why: the only built-in role can also list the keys and delete the service
 - The Function's identity gets the fewest roles that work, each scoped to one resource
 - CI reaches Azure through OIDC with no stored credentials
 

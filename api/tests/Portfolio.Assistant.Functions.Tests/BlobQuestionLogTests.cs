@@ -55,6 +55,31 @@ namespace Portfolio.Assistant.Functions.Tests
             (await Lines("2026/10/22.jsonl")).Should().Equal(Entry(lateEvening.AddMinutes(2), "rate_limited").ToJsonLine());
         }
 
+        [Fact]
+        public async Task A_day_reads_back_as_its_lines_in_the_order_written()
+        {
+            await SkipUnlessAzuriteRunsAsync();
+            var log = new BlobQuestionLog(container);
+            var morning = new DateTimeOffset(2026, 10, 25, 9, 0, 0, TimeSpan.Zero);
+            await log.WriteAsync(Entry(morning, "ok"), TestContext.Current.CancellationToken);
+            await log.WriteAsync(Entry(morning.AddHours(1), "filtered"), TestContext.Current.CancellationToken);
+
+            (await log.ReadDayAsync(new DateOnly(2026, 10, 25), TestContext.Current.CancellationToken))
+                .Should().Equal(Entry(morning, "ok").ToJsonLine(), Entry(morning.AddHours(1), "filtered").ToJsonLine());
+        }
+
+        [Fact]
+        public async Task A_day_with_no_blob_reads_as_no_lines()
+        {
+            await SkipUnlessAzuriteRunsAsync();
+
+            (await new BlobQuestionLog(container).ReadDayAsync(new DateOnly(2026, 10, 25), TestContext.Current.CancellationToken)).Should().BeEmpty();
+        }
+
+        [Fact]
+        public void The_log_names_its_storage_account_for_the_summary_email() =>
+            new BlobQuestionLog(container).StorageAccount.Should().Be("devstoreaccount1");
+
         private async Task<string[]> Lines(string path)
         {
             var content = await container.GetBlobClient(path).DownloadContentAsync(TestContext.Current.CancellationToken);

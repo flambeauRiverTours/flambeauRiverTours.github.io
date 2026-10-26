@@ -114,5 +114,29 @@ namespace Portfolio.Assistant.Core.Tests
                 "inputTokens", "cacheReadTokens", "cacheWriteTokens", "outputTokens");
             JsonDocument.Parse(For(new AskOutcome.ModelError(Ask))!.ToJsonLine()).RootElement.EnumerateObject().Should().HaveCount(8);
         }
+
+        [Fact]
+        public void A_line_reads_back_as_the_entry_that_wrote_it()
+        {
+            var answered = For(new AskOutcome.Answered(Ask, new ModelAnswer("x", 900, 12) { CacheReadTokens = 850 }, new AnswerWithLinks("Epic.", [Spie])))!;
+            var failed = For(new AskOutcome.ModelError(Ask))!;
+
+            QuestionLogEntry.FromJsonLine(answered.ToJsonLine()).Should().BeEquivalentTo(answered);
+            QuestionLogEntry.FromJsonLine(failed.ToJsonLine()).Should().BeEquivalentTo(failed);
+        }
+
+        // one damaged line shouldn't hide the rest of the day
+        [Theory]
+        [InlineData("")]
+        [InlineData("not json")]
+        [InlineData("{\"timestamp\":\"2026-10-21T14:00:00+00:00\"")]
+        [InlineData("{\"requestId\":\"trace-1\"}")]
+        [InlineData("[1,2]")]
+        public void A_line_that_isnt_a_whole_entry_reads_as_null(string line) =>
+            QuestionLogEntry.FromJsonLine(line).Should().BeNull();
+
+        [Fact]
+        public void A_utc_day_names_the_same_blob_as_any_moment_in_it() =>
+            QuestionLogEntry.BlobPath(new DateOnly(2026, 10, 21)).Should().Be(QuestionLogEntry.BlobPath(Now));
     }
 }
