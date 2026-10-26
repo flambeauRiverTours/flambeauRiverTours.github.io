@@ -2,6 +2,8 @@
  * Data model for various portions of the site
  */
 
+import type { JSX } from "react";
+
 export interface ISectionData{
     id: string; //anchor id, used for #links and navigation
     buttonTitle: string;

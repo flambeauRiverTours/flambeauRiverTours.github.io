@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { BodyBlockStyle, IHighlight, IProfile, ISectionData, SectionGroup } from "./SectionData";
 import fantasyFootballImgUrl from '../assets/FantasyFootball.png';
 import peruImgUrl from '../assets/Peru.jpg';

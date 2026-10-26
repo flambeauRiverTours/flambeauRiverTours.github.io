@@ -2,6 +2,7 @@
  * Shared rendering helpers for entry bodies and their link rows
  */
 
+import type { JSX } from "react";
 import { ILink } from "../../datamodel/SectionData";
 
 //plain strings get wrapped in a paragraph, rich JSX bodies are rendered as-is

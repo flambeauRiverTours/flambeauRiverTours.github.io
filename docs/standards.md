@@ -160,7 +160,7 @@ Adopted from the FantasyFootballWebsite repository's `docs/standards.md`, adapte
 **Motion and performance**
 - Motion is decorative and never carries information
   - The spinner always comes with "Thinking…"
-- Initial JavaScript stays under 125 KB gzipped (65.8 KB on 2026-10-21; enforced by `ci.yml`)
+- Initial JavaScript stays under 125 KB gzipped (88.7 KB on 2026-10-26, up from 65.8 KB with React 19; enforced by `ci.yml`)
   - why: a budget catches dependency bloat before it ships
 - Features a visitor may never open load lazily, in their own chunk
   - The drawer and the API client load on first open
