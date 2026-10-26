@@ -19,6 +19,16 @@ namespace Portfolio.Assistant.Functions.Tests
             values.GetProperty("Storage__ConnectionString").GetString().Should().Be("UseDevelopmentStorage=true");
         }
 
+        // the host needs its own storage for any trigger other than HTTP, here the daily summary's timer
+        [Fact]
+        public void The_example_gives_the_host_azurite_for_the_timer() =>
+            Example.GetProperty("Values").GetProperty("AzureWebJobsStorage").GetString().Should().Be("UseDevelopmentStorage=true");
+
+        // a local run logs the summary instead of emailing it
+        [Fact]
+        public void The_example_leaves_the_email_service_out() =>
+            Example.GetProperty("Values").EnumerateObject().Should().NotContain(setting => setting.Name.StartsWith("Email__", StringComparison.Ordinal));
+
         [Fact]
         public void The_example_spells_out_the_default_limits() =>
             Example.GetProperty("Values").EnumerateObject().Where(setting => setting.Name.StartsWith("Limits__", StringComparison.Ordinal))

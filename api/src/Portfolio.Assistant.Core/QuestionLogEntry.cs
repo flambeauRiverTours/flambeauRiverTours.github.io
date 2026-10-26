@@ -71,11 +71,27 @@ namespace Portfolio.Assistant.Core
         }
 
         /// <summary>The day's append blob, <c>yyyy/MM/dd.jsonl</c> in UTC.</summary>
-        public static string BlobPath(DateTimeOffset timestamp) =>
-            timestamp.UtcDateTime.ToString("yyyy'/'MM'/'dd'.jsonl'", CultureInfo.InvariantCulture);
+        public static string BlobPath(DateTimeOffset timestamp) => BlobPath(DateOnly.FromDateTime(timestamp.UtcDateTime));
+
+        /// <summary>The UTC day's append blob, <c>yyyy/MM/dd.jsonl</c>.</summary>
+        public static string BlobPath(DateOnly day) => day.ToString("yyyy'/'MM'/'dd'.jsonl'", CultureInfo.InvariantCulture);
 
         /// <summary>The entry as one line of JSON, without its newline; empty fields are left out.</summary>
         public string ToJsonLine() => JsonSerializer.Serialize(this, JsonOptions);
+
+        /// <summary>The entry a line of the log holds, or null for a line that isn't a whole entry.</summary>
+        public static QuestionLogEntry? FromJsonLine(string line)
+        {
+            try
+            {
+                var entry = JsonSerializer.Deserialize<QuestionLogEntry>(line, JsonOptions);
+                return entry is { RequestId: not null, Outcome: not null, Deployment: not null, PromptVersion: not null } ? entry : null;
+            }
+            catch (JsonException)
+            {
+                return null;
+            }
+        }
 
         private static string AnsweredOutcome(ModelAnswer answer) => answer switch
         {

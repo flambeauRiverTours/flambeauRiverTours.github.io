@@ -28,6 +28,10 @@ Design, risks and decisions: `tasks/llm-assistant-plan.md`. Eval history: `tasks
 
 ## Open
 
+- [ ] **Daily summary email** (built 2026-10-26, uncommitted; decision 12 in the plan). Tests first; how it works and every command are in `api/README.md`, "The daily summary email".
+  - **Your steps, once, before the deploy that includes it:** register `Microsoft.Communication`; deploy `infra/email-sender-role.bicep`; add its role ID to the deploy identity's role-assignment condition
+  - **After that deploy:** `disableLocalAuth` reads `true` on `acs-jtassistant`; a manual run sends yesterday's summary and a second sends nothing; the first 06:00 email arrives (mark not-spam once if needed). A 403 means the custom role isn't enough: decide on the built-in role deliberately
+  - **Watch for** the `InvalidLinkedDomains` error on the first deploy (`what-if` was clean); if it appears, link the domain in a second pass
 - [ ] **1.11 post-deploy checks:** six questions in a minute with forged `X-Forwarded-For` headers, the sixth gets a 429; `requestId` is the App Insights trace ID; `rate-limits/` has today's count; `cacheReadTokens` on a second question within 5 minutes
 - [ ] **4.8 browser check** at both widths on `jacktreadwell.com` (CORS allows only the live origins), including the drawer's smooth scroll and a real phone keyboard
 - [ ] Read the question log daily for the first week, then weekly; add every wrong answer to `questions.jsonl`

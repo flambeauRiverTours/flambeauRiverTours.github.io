@@ -1,4 +1,5 @@
-﻿using Azure.Core;
+﻿using Azure.Communication.Email;
+using Azure.Core;
 using Azure.Storage.Blobs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -43,10 +44,46 @@ namespace Portfolio.Assistant.Functions
             Retry = { NetworkTimeout = TimeSpan.FromSeconds(3), MaxRetries = 1, Delay = TimeSpan.FromMilliseconds(200) },
         };
 
-        /// <summary>Registers <see cref="BlobQuestionLog"/> in <see cref="AddStorage"/>'s account.</summary>
+        /// <summary>Registers <see cref="BlobQuestionLog"/> in <see cref="AddStorage"/>'s account, to write and read back.</summary>
         public static IServiceCollection AddQuestionLog(this IServiceCollection services) =>
-            services.AddSingleton<IQuestionLog>(provider =>
-                new BlobQuestionLog(provider.GetRequiredService<BlobServiceClient>().GetBlobContainerClient(BlobQuestionLog.ContainerName)));
+            services.AddSingleton(provider =>
+                    new BlobQuestionLog(provider.GetRequiredService<BlobServiceClient>().GetBlobContainerClient(BlobQuestionLog.ContainerName)))
+                .AddSingleton<IQuestionLog>(provider => provider.GetRequiredService<BlobQuestionLog>())
+                .AddSingleton<IQuestionLogReader>(provider => provider.GetRequiredService<BlobQuestionLog>());
+
+        /// <summary>Registers the daily summary's sender and sent markers; needs <see cref="AddQuestionLog"/>.</summary>
+        /// <param name="credential">Signs in to the email service named by <c>Email__Endpoint</c>.</param>
+        /// <param name="inAzure">Requires the <c>Email</c> settings; locally, without them, the summary is logged.</param>
+        public static IServiceCollection AddDailySummary(this IServiceCollection services, TokenCredential credential, bool inAzure)
+        {
+            AddEmailOptions(services, inAzure);
+            services.TryAddSingleton(TimeProvider.System);
+            services.TryAddSingleton<ISentSummaries>(provider =>
+                new BlobSentSummaries(provider.GetRequiredService<BlobServiceClient>().GetBlobContainerClient(BlobDailyCountStore.ContainerName)));
+            return services.AddSingleton(provider => EmailSender(provider, credential));
+        }
+
+        // in Azure a missing setting would log every summary unnoticed, so there it stops startup
+        private static void AddEmailOptions(IServiceCollection services, bool inAzure) =>
+            services.AddOptions<EmailOptions>()
+                .BindConfiguration("Email")
+                .Validate(
+                    options => options.Endpoint is null
+                        ? !inAzure
+                        : !string.IsNullOrWhiteSpace(options.Sender) && !string.IsNullOrWhiteSpace(options.Recipient),
+                    inAzure
+                        ? "Set Email:Endpoint, Email:Sender and Email:Recipient for the daily summary."
+                        : "With Email:Endpoint set, also set Email:Sender and Email:Recipient (or leave all three out to log the summary).")
+                .ValidateOnStart();
+
+        private static IEmailSender EmailSender(IServiceProvider provider, TokenCredential credential)
+        {
+            var options = provider.GetRequiredService<IOptions<EmailOptions>>().Value;
+            // the validation guarantees a sender and recipient whenever there's an endpoint
+            return options.Endpoint is { } endpoint
+                ? new AcsEmailSender(new EmailClient(endpoint, credential), options.Sender!, options.Recipient!)
+                : ActivatorUtilities.CreateInstance<LoggingEmailSender>(provider);
+        }
 
         /// <summary>Registers the storage account from the <c>Storage</c> settings, for the question log and the global count.</summary>
         /// <param name="credential">Signs in to the account named by <c>Storage__BlobServiceUri</c>.</param>

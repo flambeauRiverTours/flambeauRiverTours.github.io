@@ -94,3 +94,48 @@ az resource update --ids "$(az cognitiveservices account show -g rg-portfolio-ai
 ```
 
 In Git Bash, prefix `az` commands that take a `/subscriptions/…` ID with `MSYS_NO_PATHCONV=1`, or the path is rewritten.
+
+## The daily summary email
+
+At 06:00 UTC (`DailySummaryFunction`) the app emails you the numbers from the day before: questions, outcomes, tokens and an estimated cost, latency, the request IDs worth a look and the prompt versions. It holds **no question or answer text**, so the privacy page stays true: visitors' words stay in the 90-day log, and the email says how to open that day's file. A test fails if any of their text could reach it. Nobody asked anything: no email. Each sent day leaves a marker in `rate-limits/daily-summary/`, so a retry or a catch-up run after a restart never sends twice.
+
+It goes through Azure Communication Services Email (`acs-jtassistant`, about $0.01 a month) from its Azure-managed `DoNotReply@…azurecomm.net` address, to `ALERT_EMAIL`. Keys are off on the service; the app signs in with its identity through a custom role that can send and nothing more. Mark the first one "not spam" if Gmail files it there.
+
+Locally, with no `Email__…` settings, the summary is written to the console instead of sent. To try it, start Azurite and `func start`, put a log file for yesterday (UTC) in Azurite's `assistant-logs` container (`yyyy/MM/dd.jsonl`; today's questions only show up tomorrow), then run it from the host's admin endpoint. A second run logs "already sent":
+
+```bash
+curl -X POST http://localhost:7071/admin/functions/DailySummary -H "Content-Type: application/json" -d "{}"
+```
+
+**Once, before the first deploy that includes it** (each needs you, as an owner of the subscription):
+
+1. Register the provider; the deploy identity can't, at resource-group scope:
+
+   ```bash
+   az provider register -n Microsoft.Communication --wait
+   ```
+
+2. Create the custom role (`infra/email-sender-role.bicep`) and note its ID:
+
+   ```bash
+   ROLE=$(az deployment group create -g rg-portfolio-ai-prod --template-file infra/email-sender-role.bicep --query properties.outputs.roleDefinitionId.value -o tsv)
+   ```
+
+3. Let the deploy identity assign it, by adding it to its role-assignment condition beside Storage Blob Data Owner and Foundry User:
+
+   ```bash
+   PID=$(az identity show -g rg-portfolio-ai-prod -n myGitHubDeployIdentity --query principalId -o tsv)
+   az role assignment list --assignee "$PID" --role "Role Based Access Control Administrator" -g rg-portfolio-ai-prod --query "[0]" > rbac.json
+   sed -i "s/53ca6127-db72-4b80-b1b0-d745d6d5456d}/53ca6127-db72-4b80-b1b0-d745d6d5456d, $ROLE}/g" rbac.json
+   az role assignment update --role-assignment @rbac.json && rm rbac.json
+   ```
+
+**After that deploy**, check that keys are off, then send yesterday's summary by hand (a second run should log "already sent" and send nothing):
+
+```bash
+MSYS_NO_PATHCONV=1 az resource show -g rg-portfolio-ai-prod -n acs-jtassistant --resource-type Microsoft.Communication/communicationServices --query properties.disableLocalAuth
+KEY=$(az functionapp keys list -g rg-portfolio-ai-prod -n func-jtassistant --query masterKey -o tsv)
+curl -X POST https://func-jtassistant.azurewebsites.net/admin/functions/DailySummary -H "x-functions-key: $KEY" -H "Content-Type: application/json" -d "{}"
+```
+
+If the send fails with a 403, the custom role isn't enough; the fallback is the built-in *Communication and Email Service Owner*, which can also read keys, so decide it deliberately. To turn the email off: `az functionapp config appsettings set -g rg-portfolio-ai-prod -n func-jtassistant --settings AzureWebJobs.DailySummary.Disabled=true`.

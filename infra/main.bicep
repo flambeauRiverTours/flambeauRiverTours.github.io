@@ -42,6 +42,9 @@ var storageBlobDataOwnerRoleId = 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b'
 // Foundry User: lets the Function call the account's deployments, nothing more
 var foundryUserRoleId = '53ca6127-db72-4b80-b1b0-d745d6d5456d'
 
+// Assistant Email Sender: the custom role email-sender-role.bicep creates, by the same seed; deployed by hand first
+var emailSenderRoleId = guid(resourceGroup().id, 'assistant-email-sender')
+
 resource foundry 'Microsoft.CognitiveServices/accounts@2025-06-01' existing = {
   name: foundryAccountName
 }
@@ -236,6 +239,19 @@ resource functionApp 'Microsoft.Web/sites@2024-11-01' = {
           name: 'Storage__BlobServiceUri'
           value: storage.properties.primaryEndpoints.blob
         }
+        {
+          // the daily summary, sent with the app's identity through the Assistant Email Sender role below
+          name: 'Email__Endpoint'
+          value: 'https://${communication.properties.hostName}'
+        }
+        {
+          name: 'Email__Sender'
+          value: 'DoNotReply@${emailService::azureManagedDomain.properties.mailFromSenderDomain}'
+        }
+        {
+          name: 'Email__Recipient'
+          value: alertEmail
+        }
       ]
     }
   }
@@ -271,6 +287,49 @@ resource foundryUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
     principalId: functionApp.identity.principalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', foundryUserRoleId)
+  }
+}
+
+// About $0.01 a month: one email a day at $0.00025 each, plus a few KB of data. The summary holds no visitor text
+resource emailService 'Microsoft.Communication/emailServices@2026-03-18' = {
+  name: 'ecs-${namePrefix}'
+  location: 'global'
+  properties: {
+    dataLocation: 'Europe'
+  }
+
+  // Microsoft's own sender domain (DoNotReply@<id>.azurecomm.net): no DNS to manage. Capped at 10 emails an hour and
+  // meant for testing; one a day to the owner fits, and a custom domain is the upgrade if mail lands in spam
+  resource azureManagedDomain 'domains' = {
+    name: 'AzureManagedDomain'
+    location: 'global'
+    properties: {
+      domainManagement: 'AzureManaged'
+      userEngagementTracking: 'Disabled'
+    }
+  }
+}
+
+// No charge of its own. Keys are off, so the app's identity is the only way to send
+resource communication 'Microsoft.Communication/communicationServices@2026-03-18' = {
+  name: 'acs-${namePrefix}'
+  location: 'global'
+  properties: {
+    dataLocation: 'Europe'
+    disableLocalAuth: true
+    linkedDomains: [
+      emailService::azureManagedDomain.id
+    ]
+  }
+}
+
+resource emailSender 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(communication.id, functionApp.id, emailSenderRoleId)
+  scope: communication
+  properties: {
+    principalId: functionApp.identity.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', emailSenderRoleId)
   }
 }
 

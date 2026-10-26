@@ -8,16 +8,6 @@ namespace Portfolio.Assistant.Evals
     /// <summary>Writes the Markdown report committed to <c>api/evals/results/</c>.</summary>
     internal static class ReportWriter
     {
-        // Claude Haiku 5.5 list prices for prompts up to 100k tokens; Foundry's pricing page is authoritative, edit these when the model changes
-        private const decimal DollarsPerMillionInput = 0.10m;
-        private const decimal DollarsPerMillionOutput = 0.50m;
-        private const decimal CacheReadPriceFactor = 0.1m;
-        private const decimal CacheWritePriceFactor = 1.25m;
-
-        // Claude Sonnet 5.5, the grounding judge
-        private const decimal JudgeDollarsPerMillionInput = 2.00m;
-        private const decimal JudgeDollarsPerMillionOutput = 10.00m;
-
         private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
 
         // the same rule on every OS, unlike Path.GetInvalidFileNameChars
@@ -107,11 +97,11 @@ namespace Portfolio.Assistant.Evals
         private static void WriteCost(StringBuilder report, IReadOnlyList<CaseResult> results)
         {
             var runs = results.SelectMany(result => result.Runs).ToList();
-            var tokens = new TokenTotals(
+            var tokens = new TokenUsage(
                 runs.Sum(run => (long)run.InputTokens), runs.Sum(run => (long)run.CacheReadTokens), runs.Sum(run => (long)run.CacheWriteTokens), runs.Sum(run => (long)run.OutputTokens));
 
             report.AppendLine("## Tokens and cost").AppendLine();
-            WriteTokens(report, tokens, DollarsPerMillionInput, DollarsPerMillionOutput);
+            WriteTokens(report, tokens, ModelPrice.ClaudeHaiku55);
             report.AppendLine();
         }
 
@@ -126,7 +116,7 @@ namespace Portfolio.Assistant.Evals
             var verdicts = results.SelectMany(result => result.Runs).Select(run => run.Grounding).OfType<GroundingVerdict>().ToList();
             var judged = verdicts.Count(verdict => verdict.Unsupported is not null);
             var withClaims = verdicts.Count(verdict => verdict.Unsupported is { Count: > 0 });
-            var tokens = new TokenTotals(
+            var tokens = new TokenUsage(
                 verdicts.Sum(verdict => (long)verdict.InputTokens), verdicts.Sum(verdict => (long)verdict.CacheReadTokens),
                 verdicts.Sum(verdict => (long)verdict.CacheWriteTokens), verdicts.Sum(verdict => (long)verdict.OutputTokens));
 
@@ -134,7 +124,7 @@ namespace Portfolio.Assistant.Evals
                 .AppendLine(Invariant, $"- Judged by `{context.JudgeDeployment}`: every claim in an answer checked against the knowledge")
                 .AppendLine(Invariant, $"- Runs with unsupported claims: {withClaims} of {judged} judged (each fails its run)")
                 .AppendLine(Invariant, $"- Not judged: {verdicts.Count - judged}{NoVerdictReasons(verdicts)}");
-            WriteTokens(report, tokens, JudgeDollarsPerMillionInput, JudgeDollarsPerMillionOutput);
+            WriteTokens(report, tokens, ModelPrice.ClaudeSonnet55);
             report.AppendLine();
         }
 
@@ -149,11 +139,10 @@ namespace Portfolio.Assistant.Evals
             return reasons.Count == 0 ? "" : $" ({string.Join(", ", reasons)})";
         }
 
-        private static void WriteTokens(StringBuilder report, TokenTotals tokens, decimal inputPrice, decimal outputPrice)
+        private static void WriteTokens(StringBuilder report, TokenUsage tokens, ModelPrice price)
         {
-            var inputPriced = tokens.Input - tokens.CacheRead - tokens.CacheWrite + (tokens.CacheRead * CacheReadPriceFactor) + (tokens.CacheWrite * CacheWritePriceFactor);
-            var cost = (inputPriced * inputPrice + tokens.Output * outputPrice) / 1_000_000;
-            var prices = $"${inputPrice.ToString("0.00", Invariant)} / ${outputPrice.ToString("0.00", Invariant)} per million tokens";
+            var cost = price.Cost(tokens);
+            var prices = $"${price.Input.ToString("0.00", Invariant)} / ${price.Output.ToString("0.00", Invariant)} per million tokens";
             var cached = $"{tokens.CacheRead.ToString("N0", Invariant)} read from the cache, {tokens.CacheWrite.ToString("N0", Invariant)} written to it";
 
             report.AppendLine(Invariant, $"- {tokens.Input.ToString("N0", Invariant)} input ({cached}) + {tokens.Output.ToString("N0", Invariant)} output tokens")
@@ -195,8 +184,5 @@ namespace Portfolio.Assistant.Evals
         private static string Quote(string text) => string.Join("\n", text.Replace("\r\n", "\n").Split('\n').Select(line => $"> {line}"));
 
         private static string Percent(double rate) => rate.ToString("0%", Invariant);
-
-        /// <summary>Tokens summed over runs; <see cref="Input"/> includes the cached ones.</summary>
-        private sealed record TokenTotals(long Input, long CacheRead, long CacheWrite, long Output);
     }
 }
