@@ -185,7 +185,7 @@ Adopted from the FantasyFootballWebsite repository's `docs/standards.md`, adapte
   - Build and test tools also: `MPL-2.0`, `BlueOak-1.0.0`, `CC0-1.0`
   - `npm run check:licences` checks every package in the lockfile, in CI
   - Exceptions are pinned to an exact version, so an upgrade is checked again (`scripts/licences.ts`)
-  - **Exception:** `argparse` 2.0.1 (Python-2.0, permissive), a dev package through ESLint 8's `js-yaml` (accepted 2026-10-21)
+  - **Exception, by name:** `caniuse-lite` (CC-BY-4.0, browser-support data), dev only, through `eslint-plugin-react-hooks`' Babel. It's republished almost weekly, so a pinned version would fail most Dependabot updates (proposed 2026-10-26)
   - **Exception:** `@fontsource/*` packages may be OFL-1.1, the usual licence for fonts; nothing else may (2026-10-21)
 - The page makes no requests to third parties; fonts are bundled, not loaded from Google
   - why: the privacy note promises no tracking, and a Google-hosted font sends every visitor's IP address to Google (checked by `scripts/privacy.test.ts`)
