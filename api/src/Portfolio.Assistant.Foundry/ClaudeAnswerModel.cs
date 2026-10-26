@@ -46,7 +46,7 @@ namespace Portfolio.Assistant.Foundry
             Model = Deployment,
             MaxTokens = MaxTokens,
             System = new List<TextBlockParam> { new() { Text = prompt.System, CacheControl = new CacheControlEphemeral() } },
-            Messages = [.. prompt.Messages.Select(message => new MessageParam { Role = message.Role == ChatRole.User ? Role.User : Role.Assistant, Content = message.Content })],
+            Messages = [.. prompt.Messages.Select(message => message.Role == ChatRole.User ? (MessageParam)new UserMessageParam(message.Content) : new AssistantMessageParam(message.Content))],
             Thinking = new ThinkingConfigDisabled(),
             OutputConfig = new OutputConfig { Effort = Effort.Low },
         };

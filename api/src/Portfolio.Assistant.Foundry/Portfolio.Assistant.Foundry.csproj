@@ -7,7 +7,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Anthropic.Foundry" Version="0.8.0" />
+    <PackageReference Include="Anthropic.Foundry" Version="1.0.0" />
     <PackageReference Include="Azure.Core" Version="1.63.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.14" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.14" />

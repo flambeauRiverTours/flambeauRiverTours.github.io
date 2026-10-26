@@ -60,7 +60,7 @@ namespace Portfolio.Assistant.Foundry
             Model = Deployment,
             MaxTokens = think ? MaxTokensWhenThinking : MaxTokens,
             System = new List<TextBlockParam> { new() { Text = system, CacheControl = new CacheControlEphemeral() } },
-            Messages = [new MessageParam { Role = Role.User, Content = GroundingPrompt.User(question, answer) }],
+            Messages = [new UserMessageParam(GroundingPrompt.User(question, answer))],
             Thinking = think ? new ThinkingConfigAdaptive() : new ThinkingConfigBetweenTools(),
             OutputConfig = new OutputConfig { Effort = Effort.Medium, Format = new JsonOutputFormat { Schema = VerdictSchema } },
         };
