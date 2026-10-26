@@ -1,3 +1,4 @@
+import type { JSX } from "react";
 import { BodyBlockStyle, IHighlight, IProfile, ISectionData, SectionGroup } from "./SectionData";
 import fantasyFootballImgUrl from '../assets/FantasyFootball.png';
 import peruImgUrl from '../assets/Peru.jpg';
@@ -95,7 +96,7 @@ export class FullPageData {
         });
         sectionData.bodyTextSections.push({
             title: "",
-            body: <p>I'm relocating to Charlotte, North Carolina, in January 2027. If you're hiring, looking to collaborate on a project, or just want to chat about anything you find on this site, feel free to <a href="mailto:jack.treadwell.dev@gmail.com">email me</a> or reach out on <a href="https://www.linkedin.com/in/john-treadwell/">LinkedIn</a>. You can also <a href="/Jack-Treadwell-Resume.pdf">download my resume (PDF)</a>.</p>,
+            body: <p>I'm relocating to Charlotte, North Carolina, in January 2027. If you're hiring, looking to collaborate on a project, or just want to chat about anything you find on this site, feel free to <a href="mailto:jack.treadwell.dev@gmail.com">email me</a> or reach out on <a href="https://www.linkedin.com/in/john-treadwell/">LinkedIn</a>, or <a href="#ask">ask my assistant</a> a quick question. You can also <a href="/Jack-Treadwell-Resume.pdf">download my resume (PDF)</a>.</p>,
             style: BodyBlockStyle.contentBlock,
         });
         return sectionData;
@@ -193,6 +194,17 @@ export class FullPageData {
             title: "Projects",
             body: <p>Below are some of the projects I work on in my free time, listed in reverse chronological order. You can find most of them on my <a href="https://github.com/flambeauRiverTours">GitHub</a>.</p>,
             style: BodyBlockStyle.titleBlock,
+        });
+        sectionData.bodyTextSections.push({
+            id: "projects-assistant",
+            title: "AI Assistant: Ask About My Experience",
+            subtitle: "Oct 2026 · .NET 10, Azure Functions, Claude on Microsoft Foundry",
+            body: <p>The <a href="#ask">assistant on this site</a>, which answers questions about my experience from this site alone. Most of the work went into choosing the model and checking it doesn't make things up about me: three models compared, 389 test cases including a held-out set, and a second model checking every answer for claims the site doesn't support. The write-up covers how I chose the model and what the numbers really mean.</p>,
+            style: BodyBlockStyle.contentBlock,
+            links: [
+                { label: "Write-up", href: "/assistant-write-up.html" },
+                { label: "Code", href: "https://github.com/flambeauRiverTours/flambeauRiverTours.github.io/tree/main/api" },
+            ],
         });
         sectionData.bodyTextSections.push({
             id: "projects-fantasy-football",

@@ -3,6 +3,7 @@
  * plus the list of anchors its answers may link to
  */
 
+import type { JSX } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { BodyBlockStyle, IBodyTextSection, IHighlight, ILink, IProfile, ISectionData, SectionGroup } from "../src/datamodel/SectionData";
 import { FullPageData } from "../src/datamodel/FullPageData";

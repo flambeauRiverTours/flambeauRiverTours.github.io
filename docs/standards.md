@@ -153,12 +153,14 @@ Adopted from the FantasyFootballWebsite repository's `docs/standards.md`, adapte
   - Colour contrast and target size are left to the browser check: jsdom has no layout
 - The reduced-motion preference turns motion off entirely (`App.scss`)
   - why: decorative motion has nothing worth keeping
-- Answers are announced through an `aria-live` region, and the drawer focuses its input on opening
+- Each reply is announced once through a `role="status"` region, and the drawer focuses its input on opening and again after each reply
+  - Except on a touch screen, where focusing would open the keyboard over the answer
+- Only the drawer's conversation scrolls, so the input and the notice stay in view; it follows new turns only for a visitor already at the end, and becomes keyboard-focusable once it overflows
 
 **Motion and performance**
 - Motion is decorative and never carries information
   - The spinner always comes with "Thinking…"
-- Initial JavaScript stays under 125 KB gzipped (65.8 KB on 2026-10-21; enforced by `ci.yml`)
+- Initial JavaScript stays under 125 KB gzipped (88.7 KB on 2026-10-26, up from 65.8 KB with React 19; enforced by `ci.yml`)
   - why: a budget catches dependency bloat before it ships
 - Features a visitor may never open load lazily, in their own chunk
   - The drawer and the API client load on first open
@@ -255,6 +257,7 @@ Adopted from the FantasyFootballWebsite repository's `docs/standards.md`, adapte
   - The site's production npm packages get the same check in `ci.yml`
 - The site deploys only after `ci.yml` passes: `deploy.yml` calls it
   - why: a commit that doesn't build once reached review (2026-10-21)
+- `main` changes only through a pull request whose `site` check passes (the `main` ruleset); so `ci.yml` has no path filter
 - `api/knowledge` matches what `npm run build:knowledge` writes from the page, checked in `ci.yml`
   - why: the assistant would otherwise answer from an older page
 - Never pipe large output into an early-exit reader such as `grep -q` or `head`

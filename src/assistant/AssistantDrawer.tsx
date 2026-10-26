@@ -6,7 +6,7 @@ import Offcanvas from "react-bootstrap/Offcanvas";
 import Spinner from "react-bootstrap/Spinner";
 import React, { useEffect, useReducer, useRef, useState } from "react";
 import { ask as askApi, warmUp as warmUpApi } from "./askAssistant";
-import { announcementFor, conversationReducer, historyFor, maxQuestionLength, Turn, waitText } from "./conversation";
+import { announcementFor, ConversationAction, conversationReducer, historyFor, isNearBottom, maxQuestionLength, Turn, waitText } from "./conversation";
 import "./AssistantDrawer.scss";
 
 const starterQuestions = [
@@ -24,22 +24,46 @@ function AssistantDrawer({ show, onHide, modal, ask = askApi, warmUp = warmUpApi
     const [pendingId, setPendingId] = useState<string | null>(null);
     const request = useRef<AbortController | null>(null);
     const input = useRef<HTMLInputElement>(null);
+    const area = useRef<HTMLDivElement>(null);
+    const following = useRef(true); //whether the visitor was at the end of the conversation when it last changed
+    const wasWaiting = useRef(false);
+    const [overflowing, setOverflowing] = useState(false);
     const waiting = turns[turns.length - 1]?.state === "waiting";
 
     useEffect(() => {
         if (show) warmUp();
     }, [show, warmUp]);
 
+    //a new turn is followed only by a visitor already at the end; one scrolled up to reread stays where they are
+    useEffect(() => {
+        const element = area.current;
+        if (!element) return;
+        setOverflowing(element.scrollHeight > element.clientHeight);
+        if (following.current) element.scrollTo({ top: element.scrollHeight, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    }, [turns]);
+
+    //the input is disabled while waiting, which drops its focus; on a touch screen, focusing would open the keyboard over the answer
+    useEffect(() => {
+        if (wasWaiting.current && !waiting && show && !window.matchMedia("(pointer: coarse)").matches) input.current?.focus();
+        wasWaiting.current = waiting;
+    }, [waiting, show]);
+
+    //where the visitor is is read before the turn changes: a smooth scroll in progress fires scroll events from mid-way
+    const update = (action: ConversationAction) => {
+        following.current = area.current ? isNearBottom(area.current) : true;
+        dispatch(action);
+    };
+
     const send = async (question: string) => {
         const trimmed = question.trim();
         if (!trimmed || waiting) return;
 
         const history = historyFor(turns);
-        dispatch({ type: "asked", question: trimmed });
+        update({ type: "asked", question: trimmed });
         setDraft("");
         request.current = new AbortController();
         const result = await ask(trimmed, history, { signal: request.current.signal });
-        dispatch({ type: "replied", result });
+        update({ type: "replied", result });
         //a question cancelled by closing the drawer waits in the box for the visitor's return
         if (result.kind === "cancelled") setDraft(trimmed);
     };
@@ -88,7 +112,8 @@ function AssistantDrawer({ show, onHide, modal, ask = askApi, warmUp = warmUpApi
             <Offcanvas.Body className="assistantBody">
                 {/* one announcement per reply; a live conversation would also read out the visitor's own question and the waiting text */}
                 <div role="status" className="visually-hidden">{announcementFor(turns)}</div>
-                <div className="conversation">
+                {/* focusable once it scrolls, so a keyboard can scroll it too */}
+                <div ref={area} className="conversation" role="region" aria-label="Conversation" tabIndex={overflowing ? 0 : undefined}>
                     {turns.length === 0 ?
                         <div className="starters">
                             <p>Curious about Jack's work, skills or job search? Try one of these:</p>
@@ -124,6 +149,10 @@ function AssistantDrawer({ show, onHide, modal, ask = askApi, warmUp = warmUpApi
             </Offcanvas.Body>
         </Offcanvas>
     );
+}
+
+function prefersReducedMotion(): boolean {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 function Reply({ turn, onLink }: { turn: Turn; onLink: (id: string) => void }) {

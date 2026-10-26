@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import App from "./App";
-import { stubMatchMedia } from "./testing/stubMatchMedia";
+import { stubJsdomGaps } from "./testing/stubJsdomGaps";
 import { capturedResponses, CapturedResponse, replay } from "./testing/capturedResponses";
 
 //the page as it will be after the launch, with its entry points
@@ -35,7 +35,7 @@ async function openAssistant(width: number) {
 
 describe.each([["a wide screen", 1280], ["a phone", 375]])("The page on %s", (_, width) => {
     beforeAll(() => {
-        stubMatchMedia();
+        stubJsdomGaps();
         //the section highlighting watches the page, which jsdom can't lay out
         window.IntersectionObserver = class {
             observe() {}

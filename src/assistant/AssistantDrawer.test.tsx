@@ -2,10 +2,10 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import AssistantDrawer from "./AssistantDrawer";
 import { AskOptions, AskResult, HistoryMessage } from "./askAssistant";
-import { stubMatchMedia } from "../testing/stubMatchMedia";
+import { stubJsdomGaps, stubJsdomGapsMatching } from "../testing/stubJsdomGaps";
 
 const spie = { id: "experience-spie", label: "Experience › Senior Software Engineer" };
 const starter = "What is Jack working on at SPIE?";
@@ -39,7 +39,7 @@ function Page({ ask, modal = false }: { ask: FakeAsk; modal?: boolean }) {
 }
 
 describe("AssistantDrawer", () => {
-    beforeAll(stubMatchMedia);
+    beforeAll(stubJsdomGaps);
 
     afterEach(() => {
         cleanup();
@@ -201,5 +201,123 @@ describe("AssistantDrawer", () => {
 
         expect(screen.getByText(/AI-generated from this site/)).toBeTruthy();
         expect(screen.getByRole("link", { name: "Privacy" }).getAttribute("href")).toBe("/privacy.html");
+    });
+});
+
+//the conversation scrolls on its own, so the input and the notice stay in view however long it gets
+describe("AssistantDrawer's conversation", () => {
+    beforeEach(stubJsdomGaps);
+
+    afterEach(() => {
+        cleanup();
+        window.history.replaceState(null, "", "/");
+    });
+
+    //jsdom has no layout, so each test gives the scroll area the size it needs
+    function conversationArea(scrollTop: number, overflowing = true) {
+        const area = document.querySelector<HTMLElement>(".conversation")!;
+        Object.defineProperty(area, "scrollHeight", { configurable: true, value: overflowing ? 1000 : 300 });
+        Object.defineProperty(area, "clientHeight", { configurable: true, value: 400 });
+        area.scrollTop = scrollTop;
+        area.scrollTo = vi.fn() as unknown as typeof area.scrollTo;
+        return area;
+    }
+
+    it("follows a new reply when the visitor is at the bottom", async () => {
+        const { ask, reply } = pending();
+        render(<Page ask={ask} />);
+        const area = conversationArea(600);
+
+        await userEvent.click(screen.getByRole("button", { name: starter }));
+        await reply({ kind: "answer", answer: "Jack is migrating a large .NET app.", links: [] });
+
+        expect(area.scrollTo).toHaveBeenLastCalledWith({ top: 1000, behavior: "smooth" });
+    });
+
+    it("leaves a visitor who scrolled up to reread where they are", async () => {
+        const { ask, reply } = pending();
+        render(<Page ask={ask} />);
+        const area = conversationArea(600);
+        await userEvent.click(screen.getByRole("button", { name: starter }));
+        vi.mocked(area.scrollTo).mockClear();
+
+        area.scrollTop = 100;
+        fireEvent.scroll(area);
+        await reply({ kind: "answer", answer: "Jack is migrating a large .NET app.", links: [] });
+
+        expect(area.scrollTo).not.toHaveBeenCalled();
+    });
+
+    it("jumps instead of animating when the visitor prefers reduced motion", async () => {
+        stubJsdomGapsMatching("(prefers-reduced-motion: reduce)");
+        const { ask, reply } = pending();
+        render(<Page ask={ask} />);
+        const area = conversationArea(600);
+
+        await userEvent.click(screen.getByRole("button", { name: starter }));
+        await reply({ kind: "answer", answer: "Jack is migrating a large .NET app.", links: [] });
+
+        expect(area.scrollTo).toHaveBeenLastCalledWith({ top: 1000, behavior: "auto" });
+    });
+
+    //a scrollable region a keyboard can't reach can't be scrolled without a mouse
+    it("can be reached by keyboard once it overflows", async () => {
+        const { ask, reply } = pending();
+        render(<Page ask={ask} />);
+        const area = conversationArea(600, false);
+        expect(area.getAttribute("tabindex")).toBeNull();
+
+        Object.defineProperty(area, "scrollHeight", { configurable: true, value: 1000 });
+        await userEvent.click(screen.getByRole("button", { name: starter }));
+        await reply({ kind: "answer", answer: "Jack is migrating a large .NET app.", links: [] });
+
+        expect(area.getAttribute("tabindex")).toBe("0");
+        expect(screen.getByRole("region", { name: "Conversation" })).toBe(area);
+    });
+});
+
+//the input is disabled while waiting, which drops its focus; the next question shouldn't need a click
+describe("AssistantDrawer's input after a reply", () => {
+    beforeEach(stubJsdomGaps);
+
+    afterEach(() => {
+        cleanup();
+        window.history.replaceState(null, "", "/");
+    });
+
+    it.each<[string, AskResult]>([
+        ["an answer", { kind: "answer", answer: "Jack is migrating a large .NET app.", links: [] }],
+        ["the rate limit", { kind: "rateLimited", retryAfterSeconds: 300 }],
+        ["an outage", { kind: "unavailable" }],
+    ])("takes focus back after %s", async (_, result) => {
+        const { ask, reply } = pending();
+        render(<Page ask={ask} />);
+
+        await userEvent.click(screen.getByRole("button", { name: starter }));
+        await reply(result);
+
+        expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "Your question" }));
+    });
+
+    //on a touch screen, focusing the input opens the keyboard over the answer the visitor is about to read
+    it("leaves focus alone on a touch screen", async () => {
+        stubJsdomGapsMatching("(pointer: coarse)");
+        const { ask, reply } = pending();
+        render(<Page ask={ask} />);
+
+        await userEvent.click(screen.getByRole("button", { name: starter }));
+        await reply({ kind: "answer", answer: "Jack is migrating a large .NET app.", links: [] });
+
+        expect(document.activeElement).not.toBe(screen.getByRole("textbox", { name: "Your question" }));
+    });
+
+    it("doesn't take focus once the drawer has closed", async () => {
+        const { ask } = pending();
+        render(<Page ask={ask} />);
+
+        await userEvent.click(screen.getByRole("button", { name: starter }));
+        await userEvent.keyboard("{Escape}");
+
+        expect(document.activeElement).not.toBe(screen.queryByRole("textbox", { name: "Your question", hidden: true }));
     });
 });

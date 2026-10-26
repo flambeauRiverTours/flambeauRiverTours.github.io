@@ -8,3 +8,4 @@
 - **Run `npm test`, `npm run lint` and `npm run build` after any edit to `src/`, however small.** An editor-reformatted JSX line in `1e5886c` broke the build and reached review (2026-10-21). `ci.yml` now gates the deploy.
 - **Read the actual answers before blaming the model.** Correct answers failed on case patterns ("doesn't say Jack was fired"). Pin every false positive as an `EvalSetTests` row before fixing it.
 - **Prompt rules can backfire.** Rerun the targeted cases plus a full run before keeping a rule, and revert rules that don't help.
+- **Branch from a remote ref with `--no-track`: `git switch -c <name> --no-track origin/main`.** Without it the new branch tracks `main`, and a plain `git push` sends its commits straight to `main`. The soft-launch commit reached `main` without a PR this way (2026-10-21).

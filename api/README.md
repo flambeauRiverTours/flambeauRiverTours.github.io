@@ -44,10 +44,10 @@ Locally the app signs in with your `az login`; in Azure it uses its managed iden
 
 ## Reading production logs, and deleting a visitor's questions
 
-Shared keys are off, so reading the logs needs a data role. `main.bicep` gives one person Storage Blob Data Owner on the `assistant-logs` container, set by the `LOG_OWNER_PRINCIPAL_ID` repo variable (your Entra object ID: `az ad signed-in-user show --query id -o tsv`). Sign in with `az login` as that person, then find the account (the only storage account in the group once the old one is gone, task 4.5):
+Shared keys are off, so reading the logs needs a data role. `main.bicep` gives one person Storage Blob Data Owner on the `assistant-logs` container, set by the `LOG_OWNER_PRINCIPAL_ID` repo variable (your Entra object ID: `az ad signed-in-user show --query id -o tsv`). Sign in with `az login` as that person, then find the account (the only storage account in the group):
 
 ```bash
-ACCOUNT=$(az storage account list -g rg-portfolio-ai-prod --query "[?name!='stportfolioaichat'].name | [0]" -o tsv)
+ACCOUNT=$(az storage account list -g rg-portfolio-ai-prod --query "[0].name" -o tsv)
 ```
 
 Read a day (UTC):
@@ -84,3 +84,13 @@ az deployment group create --resource-group rg-portfolio-ai-prod --template-file
 ```
 
 To change the amount or alerts later, redeploy with the same `startDate`.
+
+## Foundry key auth (off, once, by hand)
+
+Everything signs in to Foundry with Entra ID, so the account's keys are turned off. Bicep doesn't own the account, so this was a one-off command (2026-10-21):
+
+```bash
+az resource update --ids "$(az cognitiveservices account show -g rg-portfolio-ai-prod -n proj-portfolio-slm-resource --query id -o tsv)" --set properties.disableLocalAuth=true
+```
+
+In Git Bash, prefix `az` commands that take a `/subscriptions/…` ID with `MSYS_NO_PATHCONV=1`, or the path is rewritten.

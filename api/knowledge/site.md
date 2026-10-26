@@ -13,7 +13,7 @@ I'm Jack, a senior software engineer with eight years of experience building .NE
 
 I'm currently a Senior Software Engineer at SPIE in Berlin, where I'm helping migrate a large application for high-voltage power line design to modern .NET. Before that, I spent six years at Epic Systems focused on healthcare billing, including three years leading a team of nine developers.
 
-I'm relocating to Charlotte, North Carolina, in January 2027. If you're hiring, looking to collaborate on a project, or just want to chat about anything you find on this site, feel free to email me or reach out on LinkedIn. You can also download my resume (PDF).
+I'm relocating to Charlotte, North Carolina, in January 2027. If you're hiring, looking to collaborate on a project, or just want to chat about anything you find on this site, feel free to email me or reach out on LinkedIn, or ask my assistant a quick question. You can also download my resume (PDF).
 
 # [experience] Experience
 
@@ -52,6 +52,11 @@ Cloud: Azure (Functions, Static Web Apps, SQL, Blob Storage), Bicep
 
 # [projects] Projects
 Below are some of the projects I work on in my free time, listed in reverse chronological order. You can find most of them on my GitHub.
+
+## [projects-assistant] AI Assistant: Ask About My Experience
+Oct 2026 · .NET 10, Azure Functions, Claude on Microsoft Foundry
+The assistant on this site, which answers questions about my experience from this site alone. Most of the work went into choosing the model and checking it doesn't make things up about me: three models compared, 389 test cases including a held-out set, and a second model checking every answer for claims the site doesn't support. The write-up covers how I chose the model and what the numbers really mean.
+External pages: Write-up (/assistant-write-up.html), Code (https://github.com/flambeauRiverTours/flambeauRiverTours.github.io/tree/main/api)
 
 ## [projects-fantasy-football] Real-Time Fantasy Football Scoreboard
 Aug – Oct 2026 · .NET 10, React, Azure

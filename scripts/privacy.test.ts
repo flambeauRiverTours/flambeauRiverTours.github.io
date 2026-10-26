@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import faqText from "../api/knowledge/faq.md?raw";
 import indexHtml from "../index.html?raw";
+import writeUpHtml from "../public/assistant-write-up.html?raw";
 import privacyHtml from "../public/privacy.html?raw";
 
 //the assistant answers privacy questions from faq.md, and visitors read privacy.html: they must make the same promises
@@ -24,9 +25,23 @@ describe("the privacy note", () => {
 });
 
 //"no tracking" must be true: a font from Google sends every visitor's IP address to Google
-describe.each([["index.html", indexHtml], ["privacy.html", privacyHtml]])("%s", (_, html) => {
+describe.each([["index.html", indexHtml], ["privacy.html", privacyHtml], ["assistant-write-up.html", writeUpHtml]])("%s", (_, html) => {
     it("loads nothing from Google", () => {
         expect(html).not.toMatch(/fonts\.(googleapis|gstatic)\.com/);
+    });
+
+    //links to other sites are fine; fetching from them as the page loads is not
+    it("loads no script, stylesheet or image from another site", () => {
+        expect(html).not.toMatch(/<(script|img|iframe)\b[^>]*\ssrc="https?:/i);
+        expect(html).not.toMatch(/<link\b[^>]*\shref="https?:/i);
+    });
+});
+
+//a static page doesn't load the app's stylesheet, so it sets its own colours (the standards' dark-on-dark lesson)
+describe("assistant-write-up.html", () => {
+    it("sets its own background and text colours", () => {
+        expect(writeUpHtml).toMatch(/body\s*\{[^}]*background-color:[^}]*\}/);
+        expect(writeUpHtml).toMatch(/body\s*\{[^}]*[^-]color:[^}]*\}/);
     });
 });
 
