@@ -57,6 +57,7 @@
    - Prove the certificate the same way.
    - **[you]** Replace the A records and delete the AAAA records.
    - **[asks first]** Straight away, remove the Pages custom domain, which would otherwise cause a redirect loop. Then set the apex as the default domain.
+   - Once the apex is the default, the `*.azurestaticapps.net` host redirects to it, so the `swa` job's smoke check moves to `https://jacktreadwell.com` in the same change.
    - **Rollback:** restore GitHub's A and AAAA records and the `www` CNAME. This restarts the stuck GitHub certificate request.
 
 ## PR 3: retire Pages (after a few clean days)
