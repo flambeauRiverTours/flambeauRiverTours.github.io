@@ -1,5 +1,5 @@
-# Simple workflow for deploying static content to GitHub Pages
-name: Deploy to GitHub Pages
+# deploys the site to GitHub Pages and to its Static Web App, side by side until the cutover (tasks/azure-static-web-apps-plan.md)
+name: Deploy the site
 
 on:
   # Runs on pushes targeting the default branch
@@ -9,16 +9,16 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# Sets the GITHUB_TOKEN permissions to allow deployment to GitHub Pages
+# Pages deploys with the GITHUB_TOKEN; the Static Web App job signs in to Azure through OIDC
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Allow one concurrent deployment
+# one deploy at a time; a deploy is never cancelled midway
 concurrency:
-  group: 'pages'
-  cancel-in-progress: true
+  group: 'site-deploy'
+  cancel-in-progress: false
 
 jobs:
   # the site's checks (ci.yml), so a red build never deploys
@@ -27,7 +27,7 @@ jobs:
     permissions:
       contents: read
 
-  # Single deploy job since we're just deploying
+  # GitHub Pages, until the cutover retires it
   deploy:
     needs: check
     environment:
@@ -56,3 +56,43 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+
+  # the Static Web App: no environment, because the deploy identity's federated credentials only trust main and pull
+  # requests. The deployment token is fetched at run time, so none is stored
+  swa:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP_NAME }}
+      SITE_APP: stapp-jtsite
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906 # v3
+        with:
+          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      - id: app
+        run: |
+          token=$(az staticwebapp secrets list -n "$SITE_APP" -g "$RESOURCE_GROUP" --query properties.apiKey -o tsv)
+          echo "::add-mask::$token"
+          echo "token=$token" >> "$GITHUB_OUTPUT"
+          echo "url=https://$(az staticwebapp show -n "$SITE_APP" -g "$RESOURCE_GROUP" --query defaultHostname -o tsv)" >> "$GITHUB_OUTPUT"
+      # uploads dist as the site check built it: no Oryx build, no API
+      - uses: Azure/static-web-apps-deploy@1a947af9992250f3bc2e68ad0754c0b0c11566c9 # v1
+        with:
+          azure_static_web_apps_api_token: ${{ steps.app.outputs.token }}
+          action: upload
+          app_location: dist
+          api_location: ''
+          skip_app_build: true
+          skip_api_build: true
+      - name: The site serves this build
+        run: scripts/site-smoke.sh "${{ steps.app.outputs.url }}"

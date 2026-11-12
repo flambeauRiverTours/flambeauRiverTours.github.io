@@ -1,0 +1,13 @@
+{
+  "routes": [
+    { "route": "/FantasyFootballWebsite", "redirect": "https://flambeaurivertours.github.io/FantasyFootballWebsite/", "statusCode": 301 },
+    { "route": "/FantasyFootballWebsite/*", "redirect": "https://flambeaurivertours.github.io/FantasyFootballWebsite/", "statusCode": 301 },
+    { "route": "/dailyDriver", "redirect": "https://flambeaurivertours.github.io/dailyDriver/", "statusCode": 301 },
+    { "route": "/dailyDriver/*", "redirect": "https://flambeaurivertours.github.io/dailyDriver/", "statusCode": 301 },
+    { "route": "/assets/*", "headers": { "Cache-Control": "public, max-age=31536000, immutable" } }
+  ],
+  "globalHeaders": {
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "same-origin"
+  }
+}
