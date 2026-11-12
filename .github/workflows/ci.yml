@@ -1,5 +1,5 @@
 name: ci
-# the site's checks: on every pull request, and called by deploy.yml so a red build never reaches Pages.
+# the site's checks and actionlint: on every pull request, and called by deploy.yml so a red build never reaches Pages.
 # No path filter: main's ruleset requires this check, and a filtered-out run would never report.
 on:
   pull_request:
@@ -47,3 +47,22 @@ jobs:
       # production packages only: dev advisories don't ship, and Dependabot raises them
       - run: npm audit --omit=dev
       - run: npm run check:licences
+
+  # here, not in api.yml, whose path filters skip a pull request that only changes a workflow
+  actions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      ACTIONLINT_VERSION: 1.7.12
+      ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: actionlint
+        run: |
+          set -euo pipefail
+          command -v shellcheck
+          file=actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz
+          curl -fsSL -o "$file" "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/$file"
+          echo "$ACTIONLINT_SHA256  $file" | sha256sum -c -
+          tar -xzf "$file" actionlint
+          ./actionlint -color

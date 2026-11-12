@@ -23,9 +23,32 @@ describe("api.yml", () => {
     });
 });
 
+//the templates each `az deployment group <command>` in a workflow names, in order
+function templates(workflow: string, command: "what-if" | "create"): string[] {
+    return [...workflow.matchAll(new RegExp(`az deployment group ${command}[^]*?--template-file (\\S+)`, "g"))]
+        .map((match) => match[1] ?? "");
+}
+
+//infrastructure changes are reviewed as a diff before they merge (docs/standards.md)
+describe("api.yml deployments", () => {
+    it("deploys the site's Static Web App", () => {
+        expect(templates(apiWorkflow, "create")).toContain("infra/site.bicep");
+    });
+
+    it("previews every template it deploys", () => {
+        expect(templates(apiWorkflow, "what-if")).toEqual(templates(apiWorkflow, "create"));
+    });
+});
+
 //main's ruleset requires ci.yml's check, and a run skipped by a path filter never reports, so the pull request would wait forever
 describe("ci.yml", () => {
     it("runs on every pull request", () => {
         expect(pathFilters(ciWorkflow)).toEqual([]);
+    });
+
+    //api.yml's path filters skip a pull request that only changes deploy.yml or ci.yml
+    it("lints every workflow, so a change to any of them is checked", () => {
+        expect(ciWorkflow).toMatch(/^\s+\.\/actionlint\b/m);
+        expect(apiWorkflow).not.toMatch(/actionlint/);
     });
 });
