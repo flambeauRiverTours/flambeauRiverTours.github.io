@@ -84,7 +84,6 @@ jobs:
           token=$(az staticwebapp secrets list -n "$SITE_APP" -g "$RESOURCE_GROUP" --query properties.apiKey -o tsv)
           echo "::add-mask::$token"
           echo "token=$token" >> "$GITHUB_OUTPUT"
-          echo "url=https://$(az staticwebapp show -n "$SITE_APP" -g "$RESOURCE_GROUP" --query defaultHostname -o tsv)" >> "$GITHUB_OUTPUT"
       # uploads dist as the site check built it: no Oryx build, no API
       - uses: Azure/static-web-apps-deploy@1a947af9992250f3bc2e68ad0754c0b0c11566c9 # v1
         with:
@@ -94,5 +93,6 @@ jobs:
           api_location: ''
           skip_app_build: true
           skip_api_build: true
+      # the live site: the app's own hostname redirects to the apex, its default domain
       - name: The site serves this build
-        run: scripts/site-smoke.sh "${{ steps.app.outputs.url }}"
+        run: scripts/site-smoke.sh https://jacktreadwell.com
