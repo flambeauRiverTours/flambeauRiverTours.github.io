@@ -61,8 +61,9 @@ describe("deploy.yml's Static Web App job", () => {
         expect(swaJob).toMatch(/::add-mask::/);
     });
 
-    it("smoke-tests the deployed site", () => {
-        expect(swaJob).toMatch(/scripts\/site-smoke\.sh/);
+    //the apex is the default domain, so the app's own hostname only redirects to it
+    it("smoke-tests the live site at the apex", () => {
+        expect(swaJob).toMatch(/scripts\/site-smoke\.sh https:\/\/jacktreadwell\.com$/m);
     });
 });
 
